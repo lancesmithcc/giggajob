@@ -1,0 +1,130 @@
+We are building a wordpress theme for an employment site. The theme is called "Giggajob". by "Genex Marketing Agency Ltd."
+
+<access_control>
+    <roles>We are using the plugin "User Role Editor" to manage user roles and capabilities. specifically user-role-editor.4.64.2</roles>
+    <wordpress_admin>
+        Only administrators can access the WordPress admin panel.
+        Admin panel is organized into three main sections:
+        1. Employee
+            - Manage employees
+            - Resume templates
+        2. Employer
+            - Manage jobs
+            - Manage employer profile
+        3. Jobs
+            - Manage jobs
+            - Job templates
+    </wordpress_admin>
+
+    <frontend_access>
+        <employee>
+            - Cannot access WordPress admin
+            - Have their own frontend dashboard at /employee-dashboard
+            - Can manage their resume profile
+            - Can search and apply for jobs
+            - Can track their job applications
+        </employee>
+
+        <employer>
+            - Cannot access WordPress admin
+            - Have their own frontend dashboard at /employer-dashboard
+            - Can post and manage job listings
+            - Can manage their employer profile
+            - Can review job applications
+        </employer>
+
+        <guests>
+            - Cannot access WordPress admin
+            - Can view public job listings
+            - Can view public employer profiles
+            - Cannot apply for jobs
+            - Cannot create profiles
+            - Must register as employee or employer for additional access
+        </guests>
+    </frontend_access>
+</access_control>
+
+<custom_post_types>
+
+<my_resume>
+    <fields>
+        <li>Your Name</li>
+        <li>profile picture</li>
+        <li>tagline</li>
+        <li>bio</li>
+        <li>social media / external links</li>
+        <li>skills</li>
+        <li>experience</li>
+        <li>education</li>
+        <li>awards/certifications</li>
+    </fields>
+
+</my_resume>
+
+<employer_profile>
+    <fields>
+        <li>Company Name</li>
+        <li>Company Description</li>
+        <li>Social Media / External Links</li>
+        <li>Address</li>
+        <li>Phone Number</li>
+        <li>Industry</li>
+    </fields>
+</employer_profile> 
+
+    <jobs> 
+        <description>The jobs posted by the employers</description> 
+        <fields>
+            <li>Job Title</li>
+            <li>Company Name</li>
+            <li>Job Description</li>
+            <li>Job Type(Full Time, Part Time, contract, temporary, Internship)</li>
+            <li>Job Industry(add and remove industries as needed)</li>
+            <li>Job Location(add and remove locations as needed)</li>
+            <li>Job Salary(manditory input range or "legal exemption for non-disclosure")</li>
+            <li>remote options
+            <ul>
+                <li>radio for remote friendly</li>
+                <li>radio for remote hybrid</li>
+            </ul>
+            </li>
+        </fields>
+    </jobs>
+
+</custom_post_types>
+
+
+<employer_dashboard>
+    <frontend>
+        <li>post a job</li>
+        <li>manage jobs
+             <li>manage applicants</li>
+        </li>
+        <li>manage employer profile</li>
+       
+    </frontend>
+</employer_dashboard>
+
+
+<employee_dashboard>
+    <frontend>
+        <li>search jobs</li>
+        <li>manage applications</li>
+        <li>manage your resume</li>
+    </frontend>
+</employer_dashboard>
+
+<technologies>
+    <li>wordpress</li>
+    <li>gutenberg block editor</li>
+    <li>php</li>
+    <li>html</li>
+    <li>css</li>
+    <li>mysql</li>
+    <li>javascript</li>
+    <li>jquery</li>
+    <li>ajax</li>
+    <li>react</li>
+    <li>bootstrap</li>
+    <li>json</li>
+</technologies>

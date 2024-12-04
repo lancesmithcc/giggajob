@@ -1,0 +1,98 @@
+/*
+Theme Name: Giggajob
+Theme URI: https://genexmarketing.com/themes/giggajob
+Description: A modern employment WordPress theme for job listings and resume management
+Version: 1.0.0
+Requires at least: 5.9
+Tested up to: 6.4
+Requires PHP: 7.4
+Author: Genex Marketing Agency Ltd.
+Author URI: https://genexmarketing.com
+Text Domain: giggajob
+License: GNU General Public License v2 or later
+License URI: http://www.gnu.org/licenses/gpl-2.0.html
+Tags: jobs, employment, resume, job-board, bootstrap
+*/
+
+/* Base styles */
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+    line-height: 1.6;
+    color: #333;
+}
+
+/* Layout */
+.site-header {
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.content-area {
+    min-height: calc(100vh - 200px);
+}
+
+.site-footer {
+    margin-top: auto;
+}
+
+/* Forms */
+.form-control:focus,
+.form-select:focus {
+    border-color: #80bdff;
+    box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25);
+}
+
+/* Cards */
+.card {
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    transition: transform 0.2s ease-in-out;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+}
+
+/* Buttons */
+.btn-primary {
+    background-color: #0056b3;
+    border-color: #0056b3;
+}
+
+.btn-primary:hover {
+    background-color: #004494;
+    border-color: #004494;
+}
+
+/* Navigation */
+.navbar-nav .nav-link {
+    padding: 0.5rem 1rem;
+}
+
+.navbar-nav .nav-link.active {
+    color: #0056b3;
+}
+
+/* Dashboard */
+.dashboard-overview .card {
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.job-listing {
+    transition: all 0.3s ease;
+}
+
+.job-listing:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .navbar-brand {
+        max-width: 200px;
+    }
+    
+    .job-listing {
+        margin-bottom: 1rem;
+    }
+}
