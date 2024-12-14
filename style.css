@@ -11,79 +11,608 @@ Author URI: https://genexmarketing.com
 Text Domain: giggajob
 License: GNU General Public License v2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
-Tags: jobs, employment, resume, job-board, bootstrap
+Tags: jobs, employment, resume, job-board, bootstrap 
 */
 
-/* Base styles */
+/* Import Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;900&display=swap');
+/* Reset and Base styles */
+*, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: 'Poppins', sans-serif;
+}
+
+html {
+    background-color: #010101 !important;
+}
+
 body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+    font-family: 'Poppins', sans-serif;
+    font-weight: 300;
     line-height: 1.6;
-    color: #333;
+    color: #e0e0e0;
+    background-color: #010101;
+    min-height: 100vh;
+    text-align:center;
+	
+
 }
 
-/* Layout */
-.site-header {
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+.site-main{
+background-color:transparent !important;color:#fff;
+background-image: url('assets/img/bg.jpg') !important;
+background-attachment: fixed;}
+
+.frontlogo{width:222px;height:auto;margin:0 auto;}
+.toplogo{width:144px;height:auto;margin:0 auto;margin-top:-5px;}
+/* WordPress Specific */
+.wp-block-image img {
+    border-radius: 11px;
 }
 
-.content-area {
-    min-height: calc(100vh - 200px);
+.wp-block-quote {
+    border-left: 4px solid #d1d469;
+    padding-left: 1rem;
+    color: #888;
 }
 
-.site-footer {
-    margin-top: auto;
+.wp-block-code {
+    background-color: #212020;
+    color: #d1d469;
+    border: 1px solid #333;
 }
 
-/* Forms */
-.form-control:focus,
-.form-select:focus {
-    border-color: #80bdff;
-    box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25);
+.wp-caption {
+    background-color: #212020;
+    border: 1px solid #333;
+    padding: 5px;
 }
 
-/* Cards */
-.card {
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-    transition: transform 0.2s ease-in-out;
+.wp-caption-text {
+    color: #888;
+    font-size: 0.9em;
+    text-align: center;
+    margin-top: 5px;
 }
 
-.card:hover {
-    transform: translateY(-2px);
+/* Typography */
+h1, h2, h3, h4, h5, h6 {
+    color: #e1e66d;
+    font-weight: 900;
+    letter-spacing: -0.02em;
+    margin-bottom: 1rem;
 }
 
-/* Buttons */
-.btn-primary {
-    background-color: #0056b3;
-    border-color: #0056b3;
+p {
+    margin-bottom: 1rem;
+    color: #e0e0e0;
 }
 
-.btn-primary:hover {
-    background-color: #004494;
-    border-color: #004494;
+strong, b {
+    font-weight: 900;
+    color: #fff;
 }
 
-/* Navigation */
-.navbar-nav .nav-link {
-    padding: 0.5rem 1rem;
+small {
+    color: #888;
 }
 
-.navbar-nav .nav-link.active {
-    color: #0056b3;
+/* Hero Section */
+.hero, .front-page, .heady {
+    background-color:transparent !important;
+}
+.heady{max-width:777px;}
+.hero h1 {
+    color: #fff;
+}
+
+.job-search-form {
+    background-color: #171717 !important;
+    border: 1px solid #333;
+}
+
+/* Job Listings */
+.job-listing {
+    background-color: #212020 !important;
+    border: 1px solid #333 !important;
+    border-radius:11px;
+
+}
+
+.job-listing:hover {
+    border-color: #d1d469 !important;
+}
+
+.job-meta {
+    color: #888;
+}
+
+.job-type {
+    background-color: #d1d469;
+    color: #171717;
 }
 
 /* Dashboard */
 .dashboard-overview .card {
-    border-radius: 10px;
-    overflow: hidden;
+    background-color: #212020;
+    border: 1px solid #333;
 }
 
-.job-listing {
-    transition: all 0.3s ease;
+.nav-pills .nav-link {
+    color: #e0e0e0;
 }
 
-.job-listing:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+.nav-pills .nav-link:hover {
+    background-color: rgba(209, 212, 105, 0.1);
+}
+
+.nav-pills .nav-link.active {
+    background-color: #d1d469;
+    color: #171717;
+    font-weight: 900;
+}
+
+/* Tables */
+.table {
+    color: #e0e0e0;
+}
+
+.table thead th {
+    background-color: #171717;
+    color: #fff;
+    border-bottom: 2px solid #333;
+    font-weight: 900;
+}
+
+.table tbody tr:hover {
+    background-color: rgba(209, 212, 105, 0.05);
+}
+
+.table td {
+    border-color: #333;
+}
+
+/* Forms and Inputs */
+.select2-container--bootstrap-5 .select2-selection {
+    background-color: #212020 !important;
+    border-color: #333 !important;
+    color: #e0e0e0 !important;
+}
+
+.select2-container--bootstrap-5 .select2-dropdown {
+    background-color: #212020;
+    border-color: #333;
+}
+
+.select2-container--bootstrap-5 .select2-results__option {
+    color: #e0e0e0;
+}
+
+.select2-container--bootstrap-5 .select2-results__option--highlighted {
+    background-color: #d1d469 !important;
+    color: #171717 !important;
+}
+
+/* Modal */
+.modal-content {
+    background-color: #212020;
+    border: 1px solid #333;
+}
+
+.modal-header {
+    border-bottom: 1px solid #333;
+}
+
+.modal-footer {
+    border-top: 1px solid #333;
+}
+
+/* Pagination */
+.pagination .page-link {
+    background-color: #212020;
+    border-color: #333;
+    color: #e0e0e0;
+}
+
+.pagination .page-link:hover {
+    background-color: #d1d469;
+    border-color: #d1d469;
+    color: #171717;
+}
+
+.pagination .page-item.active .page-link {
+    background-color: #d1d469;
+    border-color: #d1d469;
+    color: #171717;
+    font-weight: 900;
+}
+
+/* Footer */
+.site-footer {
+    background-color: #010101;
+    border-top: 1px solid #333;
+    color: #888;clear:both;
+}
+
+.site-footer h5 {
+    color: #e1e66d;
+    font-weight: 900;
+background:#010101
+}
+
+.site-footer a {
+    color: #e0e0e0;
+}
+
+.site-footer a:hover {
+    color: #e1e66d;
+}
+
+/* Navigation */
+.navbar {
+    background-color: #212020 !important;
+    border-bottom: 1px solid #333;
+}
+
+.navbar-brand {
+    color: #fff !important;
+    font-weight: 900;
+}
+
+.navbar-nav .nav-link {
+    color: #e0e0e0 !important;
+}
+
+.navbar-nav .nav-link:hover,
+.navbar-nav .nav-link.active {
+    color: #d1d469 !important;
+}
+
+/* Badges */
+.badge {
+    font-weight: 300;
+}
+
+.badge.bg-primary {
+    background-color: #d1d469 !important;
+    color: #171717;
+}
+
+.badge.bg-secondary {
+    background-color: #333 !important;
+    color: #e0e0e0;
+}
+
+/* Alerts */
+.alert-primary {
+    background-color: rgba(209, 212, 105, 0.1);
+    border-color: rgba(209, 212, 105, 0.2);
+    color: #d1d469;
+}
+
+.alert-info {
+    background-color: #212020;
+    border-color: #333;
+    color: #e0e0e0;
+}
+
+/* WordPress Comments */
+.comment-list {
+    background-color: #212020;
+    border: 1px solid #333;
+    padding: 1rem;
+}
+
+.comment-meta {
+    color: #888;
+}
+
+.comment-author .avatar {
+    border-radius: 50%;
+    border: 2px solid #333;
+}
+
+.comment-form input[type="text"],
+.comment-form input[type="email"],
+.comment-form input[type="url"],
+.comment-form textarea {
+    background-color: #212020;
+    border: 1px solid #333;
+    color: #e0e0e0;
+}
+
+/* WordPress Widgets */
+.widget {
+    background-color: #212020;
+    border: 1px solid #333;
+    padding: 1rem;
+    margin-bottom: 1rem;
+}
+
+.widget-title {
+    color: #fff;
+    font-weight: 900;
+    border-bottom: 1px solid #333;
+    padding-bottom: 0.5rem;
+}
+
+.widget ul li {
+    border-bottom: 1px solid #333;
+}
+
+.widget ul li:last-child {
+    border-bottom: none;
+}
+
+/* Custom Classes */
+.text-highlight {
+    color: #d1d469;
+}
+
+.bg-highlight {
+    background-color: #d1d469;
+    color: #171717;
+}
+
+.border-highlight {
+    border-color: #d1d469 !important;
+}
+
+/* Selection */
+::selection {
+    background-color: rgba(209, 212, 105, 0.3);
+    color: #fff;
+}
+
+/* Form Elements */
+input, textarea, select, button {
+    font-family: 'Poppins', sans-serif;
+    font-weight: 300;
+}
+
+label {
+    color: #fff;
+    margin-bottom: 0.5rem;
+    display: inline-block;
+}
+
+.form-control,
+.form-select,
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="search"],
+input[type="number"],
+input[type="tel"],
+textarea {
+    background-color: #212020;
+    border: 1px solid #333;
+    color: #fff;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    width: 100%;
+    transition: all 0.2s ease;
+}
+
+.form-control:focus,
+.form-select:focus,
+input:focus,
+textarea:focus {
+    background-color: #212020;
+    border-color: #d1d469;
+    box-shadow: 0 0 0 0.2rem rgba(209, 212, 105, 0.25);
+    color: #fff;
+    outline: none;
+}
+
+.form-control::placeholder,
+input::placeholder,
+textarea::placeholder {
+    color: #666;
+}
+
+/* Lists */
+ul, ol {
+    color: #e0e0e0;
+    padding-left: 1.5rem;
+    margin-bottom: 1rem;
+}
+
+li {
+    margin-bottom: 0.5rem;
+}
+
+/* Tables */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 1rem;
+    background-color: #212020;
+    color: #e0e0e0;
+}
+
+th {
+    background-color: #171717;
+    padding: 0.75rem;
+    border-bottom: 2px solid #333;
+    text-align: left;
+    font-weight: 900;
+    color: #fff;
+}
+
+td {
+    padding: 0.75rem;
+    border-bottom: 1px solid #333;
+}
+
+tr:hover {
+    background-color: rgba(209, 212, 105, 0.05);
+}
+
+/* Cards and Containers */
+.card {
+    background-color: #131313 !important;
+    border: 1px solid #333;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    transition: transform 0.2s ease-in-out;
+	border-radius: 11px !important;
+}
+
+.card-header {
+    background-color: #1a1a1a;
+    border-bottom: 1px solid #333;
+    padding: 1rem;
+}
+
+.card-body {
+    padding: 1rem;
+}
+
+.card-footer {
+    background-color: #000 !important;
+    border-top: 1px solid #333;
+    padding: 1rem;
+}
+.card-footer, .bg-white, .border-top-0{
+    background-color: #020202 !important;
+    border-top: 1px solid #333;
+    padding: 1rem;}
+
+/* Buttons */
+.btn,
+.btn-primary,
+.btn-outline-primary,
+button {
+    font-weight: 300;
+    padding: 0.5rem 1rem;
+    border-radius: 33px;
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.btn-primary {
+    background-color: #e1e66d !important;
+    border-color: #e1e66d !important;
+    color: #010101 !important;
+}
+
+.btn-primary:hover {
+    background-color: #b2b654 !important;
+    border-color: #b2b654 !important;
+    color: #010101 !important;
+}
+
+.btn-outline-primary {
+    background-color: transparent !important;
+    border: 1px solid #e1e66d !important;
+    color: #e1e66d !important;
+}
+
+.btn-outline-primary:hover {
+    background-color: #e1e66d !important;
+    color: #010101 !important;
+}
+
+.text-decoration-none {
+    color: #e1e66d;
+    font-weight: 900;
+}
+
+/* Navigation */
+
+.navbar {
+    background: #212020;
+    border-bottom: 1px solid #333;
+}
+
+.navbar-brand {
+    color: #fff;
+    font-weight: 900;
+}
+
+.navbar-toggler {
+    border-color: #333;
+}
+
+.navbar-toggler-icon {
+    background-color: #fff;
+}
+
+/* Alerts and Messages */
+.alert {
+    padding: 1rem;
+    margin-bottom: 1rem;
+    border: 1px solid transparent;
+    border-radius: 4px;
+}
+
+.alert-primary {
+    background-color: rgba(209, 212, 105, 0.1);
+    border-color: rgba(209, 212, 105, 0.2);
+    color: #d1d469;
+}
+
+.alert-danger {
+    background-color: rgba(220, 53, 69, 0.1);
+    border-color: rgba(220, 53, 69, 0.2);
+    color: #dc3545;
+}
+
+/* Utilities */
+.bg-dark {
+    background-color: #171717 !important;
+}
+
+.bg-darker {
+    background-color: #212020 !important;
+}
+
+.text-light {
+    color: #e0e0e0 !important;
+}
+
+.border-dark {
+    border-color: #333 !important;
+}
+
+/* Layout */
+.site-header {
+    background-color: #212020;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.content-area {
+    min-height: calc(100vh - 200px);
+    background-color: #171717;
+}
+
+.site-footer {
+    margin-top: auto;
+    background-color: #212020;
+    color: #888;
+}
+
+/* Text colors */
+.text-muted {
+    color: #888 !important;
+}
+
+.text-primary {
+    color: #e1e66d !important;
+}
+
+/* Links */
+a {
+    color: #e1e66d;
+    text-decoration: none;
+    transition: all 0.2s ease;
+}
+
+a:hover {
+    color: #b2b654;
+    text-decoration: none;
 }
 
 /* Responsive */
@@ -95,4 +624,650 @@ body {
     .job-listing {
         margin-bottom: 1rem;
     }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+    width: 10px;
+}
+
+::-webkit-scrollbar-track {
+    background: #171717;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #333;
+    border-radius: 11px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #444;
+}
+.navbar, .navbar-expand-lg, .navbar-light, .bg-light{background: #171717 !important;border-bottom: 1px solid #333 !important;}
+.site-header giggatop, .site-header *{background:#070707 !important;}
+
+.navbar, .navbar-expand-lg, .navbar-light, .bg-light, .navbar *, .navbar-expand-lg *, .navbar-light *, .bg-light *, .home, .blog, .logged-in, .admin-bar, .customize-support{background:#010101 !important;color:#fff;}
+.giggatop{background:#000000;}
+
+.job-search-form, .bg-white, .p-4, .rounded, .shadow{background:transparent !important;color:#fff;}
+
+.hero, .bg-primary, .text-white, .py-5, .container, .py-4, .hero, .bg-primary, .text-white, .py-5{border-radius:11px;margin:11px;background:transparent !important;}
+footer, .site-footer, .bg-light, .mt-5{background:transparent !important;color:#fff;}
+footer *, .site-footer *, .bg-light *, .mt-5 *, .job-search-form, .bg-white, .p-4, .rounded, .shadow{background:transparent !important;color:#fff;}
+.featured-categories{background:transparent !important;color:#fff;}
+.select2-selection, .select2-selection--single{color:#ccc !important;}
+form-select{background:#131313 !important;color:#555 !important;}
+input{background:#131313 !important;color:#555 !important;}
+
+/* Select2 and Dropdown Styling */
+.select2-container--bootstrap-5 .select2-selection,
+.form-select,
+select {
+    background-color: #131313 !important;
+    border: 1px solid #333 !important;
+    color: #ccc !important;
+    border-radius: 11px !important;
+    padding: 0.5rem 1rem !important;
+    min-height: 45px !important;
+}
+
+.select2-container--bootstrap-5 .select2-selection--single .select2-selection__rendered {
+    color: #ccc !important;
+    padding: 0 !important;
+    line-height: 1.5 !important;
+}
+
+.select2-container--bootstrap-5 .select2-dropdown {
+    background-color: #131313 !important;
+    border: 1px solid #333 !important;
+    border-radius: 11px !important;
+    margin-top: 4px !important;
+}
+
+.select2-container--bootstrap-5 .select2-results__option {
+    padding: 0.5rem 1rem !important;
+    color: #ccc !important;
+    transition: all 0.2s ease !important;
+}
+
+.select2-container--bootstrap-5 .select2-results__option--highlighted,
+.select2-container--bootstrap-5 .select2-results__option--selected {
+    background-color: #e1e66d !important;
+    color: #131313 !important;
+}
+
+.select2-container--bootstrap-5 .select2-search__field {
+    background-color: #131313 !important;
+    border: 1px solid #333 !important;
+    color: #ccc !important;
+    border-radius: 11px !important;
+    padding: 0.5rem !important;
+}
+
+.select2-container--bootstrap-5 .select2-search__field:focus {
+    border-color: #e1e66d !important;
+    box-shadow: 0 0 0 0.2rem rgba(225, 230, 109, 0.25) !important;
+}
+
+.select2-container--bootstrap-5 .select2-selection--single .select2-selection__arrow {
+    height: 45px !important;
+    position: absolute !important;
+    top: 0 !important;
+    right: 0.75rem !important;
+    width: 20px !important;
+}
+
+.select2-container--bootstrap-5 .select2-selection--single .select2-selection__arrow b {
+    border-color: #ccc transparent transparent transparent !important;
+}
+
+.select2-container--bootstrap-5.select2-container--open .select2-selection--single .select2-selection__arrow b {
+    border-color: transparent transparent #ccc transparent !important;
+}
+
+/* Native Select Styling */
+select.form-select {
+    appearance: none !important;
+    -webkit-appearance: none !important;
+    -moz-appearance: none !important;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%23ccc' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14L2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E") !important;
+    background-repeat: no-repeat !important;
+    background-position: right 1rem center !important;
+    padding-right: 2.5rem !important;
+}
+
+/* Dropdown Hover and Focus States */
+.select2-container--bootstrap-5 .select2-results__option:hover {
+    background-color: rgba(225, 230, 109, 0.1) !important;
+}
+
+.select2-container--bootstrap-5.select2-container--focus .select2-selection,
+.form-select:focus {
+    border-color: #e1e66d !important;
+    box-shadow: 0 0 0 0.2rem rgba(225, 230, 109, 0.25) !important;
+    outline: none !important;
+}
+
+/* Input Group Styling */
+.input-group-text {
+    background-color: #131313 !important;
+    border-color: #333 !important;
+    color: #ccc !important;
+}
+
+/* WordPress Editor Styles */
+.wp-editor-wrap {
+    background: #131313;
+    border-radius: 11px;
+    overflow: hidden;
+}
+
+.wp-editor-container {
+    border: 1px solid #333;
+}
+
+.mce-toolbar .mce-btn button,
+.wp-editor-tools button {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+}
+
+.mce-ico {
+    font-family: 'tinymce' !important;
+    font-style: normal;
+    font-variant: normal;
+    font-weight: normal;
+    line-height: 1;
+    text-transform: none;
+    font-size: 16px;
+}
+
+.wp-editor-tabs button,
+.wp-switch-editor {
+    background: #131313 !important;
+    border-color: #333 !important;
+    color: #ccc !important;
+}
+
+.wp-switch-editor.switch-tmce,
+.wp-switch-editor.switch-html {
+    background: #131313 !important;
+    border-color: #333 !important;
+    color: #ccc !important;
+}
+
+.tmce-active .switch-tmce,
+.html-active .switch-html {
+    background: #212020 !important;
+    color: #e1e66d !important;
+}
+
+.wp-editor-container textarea.wp-editor-area {
+    background: #131313 !important;
+    color: #ccc !important;
+    border: none !important;
+}
+
+/* TinyMCE Specific Styles */
+.mce-panel {
+    background: #131313 !important;
+    border-color: #333 !important;
+}
+
+.mce-toolbar-grp {
+    background: #131313 !important;
+    border-bottom: 1px solid #333 !important;
+}
+
+.mce-btn {
+    background: transparent !important;
+    border-color: transparent !important;
+}
+
+.mce-btn:hover {
+    background: #212020 !important;
+    border-color: #333 !important;
+}
+
+.mce-btn button {
+    color: #ccc !important;
+}
+
+.mce-btn:hover button {
+    color: #e1e66d !important;
+}
+
+.mce-toolbar .mce-btn-group .mce-btn.mce-active, 
+.mce-toolbar .mce-btn-group .mce-btn:active {
+    background: #212020 !important;
+    border-color: #333 !important;
+}
+
+.mce-toolbar .mce-btn-group .mce-btn.mce-active button, 
+.mce-toolbar .mce-btn-group .mce-btn:active button {
+    color: #e1e66d !important;
+}
+
+/* QuickTags Editor Styles */
+.quicktags-toolbar {
+    background: #131313 !important;
+    border-bottom: 1px solid #333 !important;
+}
+
+.quicktags-toolbar input.button {
+    background: transparent !important;
+    border: 1px solid #333 !important;
+    color: #ccc !important;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+}
+
+.quicktags-toolbar input.button:hover {
+    background: #212020 !important;
+    color: #e1e66d !important;
+    border-color: #e1e66d !important;
+}
+
+/* Editor Content Area */
+.wp-editor-container iframe {
+    background: #131313 !important;
+}
+
+body#tinymce.wp-editor {
+    background: #131313 !important;
+    color: #ccc !important;
+    font-family: 'Poppins', sans-serif !important;
+    margin: 10px;
+}
+
+body#tinymce.wp-editor p {
+    color: #ccc !important;
+}
+
+/* WYSIWYG Editor Icon Fix */
+.mce-ico {
+    font-family: 'tinymce' !important;
+    font-style: normal;
+    font-variant: normal;
+    font-weight: normal;
+    line-height: 1;
+    text-transform: none;
+    font-size: 16px;
+}
+
+/* TinyMCE Button Icons */
+.wp-editor-wrap .mce-btn i.mce-i-bold,
+.wp-editor-wrap .mce-btn i.mce-i-italic,
+.wp-editor-wrap .mce-btn i.mce-i-bullist,
+.wp-editor-wrap .mce-btn i.mce-i-numlist,
+.wp-editor-wrap .mce-btn i.mce-i-blockquote,
+.wp-editor-wrap .mce-btn i.mce-i-alignleft,
+.wp-editor-wrap .mce-btn i.mce-i-aligncenter,
+.wp-editor-wrap .mce-btn i.mce-i-alignright,
+.wp-editor-wrap .mce-btn i.mce-i-link,
+.wp-editor-wrap .mce-btn i.mce-i-unlink,
+.wp-editor-wrap .mce-btn i.mce-i-wp_more,
+.wp-editor-wrap .mce-btn i.mce-i-strikethrough,
+.wp-editor-wrap .mce-btn i.mce-i-spellchecker,
+.wp-editor-wrap .mce-btn i.mce-i-fullscreen,
+.wp-editor-wrap .mce-btn i.mce-i-wp_adv,
+.wp-editor-wrap .mce-btn i.mce-i-underline,
+.wp-editor-wrap .mce-btn i.mce-i-alignjustify,
+.wp-editor-wrap .mce-btn i.mce-i-forecolor,
+.wp-editor-wrap .mce-btn i.mce-i-backcolor,
+.wp-editor-wrap .mce-btn i.mce-i-pastetext,
+.wp-editor-wrap .mce-btn i.mce-i-pasteword,
+.wp-editor-wrap .mce-btn i.mce-i-removeformat,
+.wp-editor-wrap .mce-btn i.mce-i-charmap,
+.wp-editor-wrap .mce-btn i.mce-i-outdent,
+.wp-editor-wrap .mce-btn i.mce-i-indent,
+.wp-editor-wrap .mce-btn i.mce-i-undo,
+.wp-editor-wrap .mce-btn i.mce-i-redo,
+.wp-editor-wrap .mce-btn i.mce-i-help,
+.wp-editor-wrap .mce-btn i.mce-i-wp_help,
+.wp-editor-wrap .mce-btn i.mce-i-wp_code,
+.wp-editor-wrap .mce-btn i.mce-i-wp_page,
+.wp-editor-wrap .mce-btn i.mce-i-hr,
+.wp-editor-wrap .mce-btn i.mce-i-wp_more,
+.wp-editor-wrap .mce-btn i.mce-i-embed,
+.wp-editor-wrap .mce-btn i.mce-i-wp_adv {
+    font-family: 'tinymce', dashicons !important;
+}
+
+/* Dashboard Menu Highlight Colors */
+.nav-pills .nav-link.active,
+.nav-pills .show > .nav-link {
+    background-color: #e1e66d !important;
+    color: #131313 !important;
+    font-weight: 900;
+}
+
+.nav-pills .nav-link:hover {
+    color: #e1e66d !important;
+    background-color: rgba(225, 230, 109, 0.1) !important;
+}
+
+.dashboard-nav .nav-link.active,
+.dashboard-nav .nav-link:hover {
+    color: #e1e66d !important;
+}
+
+.dashboard-nav .nav-link.active {
+    background-color: #e1e66d !important;
+    color: #131313 !important;
+}
+
+/* Ensure consistent highlight colors */
+.text-primary,
+.text-highlight,
+.nav-link:hover,
+.nav-link:focus,
+.dropdown-item:hover,
+.dropdown-item:focus {
+    color: #e1e66d !important;
+}
+
+.bg-primary,
+.btn-primary,
+.badge-primary,
+.nav-pills .nav-link.active {
+    background-color: #e1e66d !important;
+    color: #131313 !important;
+}
+
+/* Keep existing site-main background */
+.site-main {
+    background-color: transparent !important;
+    color: #fff;
+    background-image: url('assets/img/bg.jpg') !important;
+    background-attachment: fixed;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    min-height: 100vh;
+    position: relative;
+    padding-bottom: 250px;
+}
+
+/* Header and Navigation - Core Styles */
+header.site-header,
+.site-header,
+.navbar,
+.navbar-expand-lg,
+.navbar-light,
+.bg-light,
+.site-header nav,
+.site-header .navbar {
+    background-color: #010101 !important;
+    border-bottom: 1px solid #333;
+}
+
+/* Force all header elements to have dark background */
+.site-header *,
+.navbar *,
+.navbar-expand-lg *,
+.navbar-light *,
+.bg-light *,
+.navbar-collapse,
+#primary-menu,
+.navbar .container,
+.site-header .container,
+.navbar-nav,
+.navbar-nav li,
+.navbar-nav a {
+    background-color: #010101 !important;
+}
+
+/* Navigation Links */
+.navbar-nav .nav-link,
+.nav-link,
+.navbar-nav li a {
+    color: #e1e66d !important;
+    font-weight: 300;
+}
+
+.navbar-nav .nav-link:hover,
+.navbar-nav .nav-link:focus,
+.navbar-nav .nav-link.active,
+.nav-link:hover,
+.navbar-nav li a:hover {
+    color: #b2b654 !important;
+}
+
+/* Footer - Core Styles */
+footer.site-footer,
+.site-footer {
+    background-color: #010101 !important;
+    border-top: 1px solid #333;
+    position: relative;
+    width: 100%;
+    clear: both;
+    margin-top: -200px;
+    z-index: 100;
+    padding: 40px 0 20px;
+}
+
+/* Force all footer elements to have dark background */
+.site-footer *,
+.site-footer .container,
+.site-footer .row,
+.site-footer .col-md-4,
+.site-footer div,
+.bg-light.mt-5,
+.bg-light.mt-5 *,
+.site-footer nav,
+.site-footer ul,
+.site-footer li {
+    background-color: #010101 !important;
+}
+
+/* Footer Links */
+.site-footer a,
+.site-footer .list-unstyled a,
+.site-footer .nav-link,
+.site-footer li a {
+    color: #e1e66d !important;
+    text-decoration: none;
+    transition: all 0.2s ease;
+}
+
+.site-footer a:hover,
+.site-footer .list-unstyled a:hover,
+.site-footer .nav-link:hover,
+.site-footer li a:hover {
+    color: #b2b654 !important;
+    text-decoration: none;
+}
+
+/* Content Alignment */
+.site-main .container {
+    max-width: 777px !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    padding: 0 15px;
+    float: none !important;
+    display: block !important;
+}
+
+/* Override Bootstrap container for better centering */
+@media (min-width: 1200px) {
+    .site-main .container {
+        max-width: 777px !important;
+    }
+}
+
+/* Ensure all content stays centered */
+.site-main .container > * {
+    margin-left: auto !important;
+    margin-right: auto !important;
+}
+
+/* Additional overrides for dark background */
+body, html {
+    background-color: #010101 !important;
+}
+
+.navbar, .navbar-expand-lg, .navbar-light, .bg-light, 
+.navbar *, .navbar-expand-lg *, .navbar-light *, .bg-light *, 
+.home, .blog, .logged-in, .admin-bar, .customize-support {
+    background-color: #010101 !important;
+}
+
+/* Override any white backgrounds */
+.bg-white, .bg-light {
+    background-color: #010101 !important;
+}
+.front-page{margin:0px auto;text-align:left;}
+
+/* Content Centering Fixes */
+.site-main .container {
+    max-width: 777px !important;
+    margin: 0 auto !important;
+    float: none !important;
+    display: block !important;
+    padding: 0 15px;
+}
+
+/* Header and Footer Color Fixes */
+.site-header,
+.navbar,
+.navbar-expand-lg,
+.navbar-light,
+.bg-light,
+.site-header nav,
+.site-header .navbar,
+.site-header *,
+.navbar *,
+.navbar-expand-lg *,
+.navbar-light *,
+.bg-light *,
+.navbar-collapse,
+#primary-menu,
+.navbar .container,
+.site-header .container,
+.navbar-nav,
+.navbar-nav li,
+.navbar-nav a {
+    background-color: #010101 !important;
+}
+
+/* Navigation Link Colors */
+.navbar-nav .nav-link,
+.nav-link,
+.navbar-nav li a,
+.site-header a,
+.site-footer a {
+    color: #e1e66d !important;
+    font-weight: 300;
+}
+
+.navbar-nav .nav-link:hover,
+.navbar-nav .nav-link:focus,
+.navbar-nav .nav-link.active,
+.nav-link:hover,
+.navbar-nav li a:hover,
+.site-header a:hover,
+.site-footer a:hover {
+    color: #b2b654 !important;
+}
+
+/* Footer Background Fix */
+.site-footer,
+.site-footer *,
+.site-footer .container,
+.site-footer .row,
+.site-footer .col-md-4,
+.site-footer div,
+.bg-light.mt-5,
+.bg-light.mt-5 * {
+    background-color: #010101 !important;
+}
+
+/* Button Colors in Header/Footer */
+.btn-primary,
+.btn.btn-primary,
+.navbar .btn-primary,
+.site-header .btn-primary {
+    background-color: #e1e66d !important;
+    border-color: #e1e66d !important;
+    color: #333 !important;
+    font-weight: 500 !important;
+}
+
+.btn-outline-primary,
+.btn.btn-outline-primary,
+.navbar .btn-outline-primary,
+.site-header .btn-outline-primary {
+    background-color: transparent !important;
+    border: 1px solid #e1e66d !important;
+    color: #e1e66d !important;
+}
+
+.btn-primary:hover,
+.btn.btn-primary:hover,
+.navbar .btn-primary:hover,
+.site-header .btn-primary:hover {
+    background-color: #b2b654 !important;
+    border-color: #b2b654 !important;
+    color: #333 !important;
+}
+
+.btn-outline-primary:hover,
+.btn.btn-outline-primary:hover,
+.navbar .btn-outline-primary:hover,
+.site-header .btn-outline-primary:hover {
+    background-color: #e1e66d !important;
+    color: #333 !important;
+}
+
+/* Ensure content stays centered */
+@media (min-width: 1200px) {
+    .site-main .container {
+        max-width: 777px !important;
+    }
+}
+
+/* Additional centering for front page content */
+.front-page {
+    margin: 0 auto;
+    text-align: left;
+    max-width: 1260px;
+}
+
+/* Content Centering and Width Fixes */
+.site-main .container,
+.front-page,
+.content-area .container {
+    max-width: 1260px !important;
+    width: 100% !important;
+    margin: 0 auto !important;
+    padding: 0 30px !important;
+    float: none !important;
+    display: block !important;
+    position: relative !important;
+}
+
+/* Override Bootstrap container for better centering */
+@media (min-width: 1200px) {
+    .site-main .container,
+    .front-page,
+    .content-area .container {
+        max-width: 1260px !important;
+        width: 100% !important;
+    }
+}
+
+/* Ensure all content stays centered */
+.site-main .container > *,
+.front-page > *,
+.content-area .container > * {
+    margin-left: auto !important;
+    margin-right: auto !important;
+}
+
+/* Header and Footer Container Width */
+.site-header .container,
+.site-footer .container {
+    max-width: 1260px !important;
+    width: 100% !important;
+    margin: 0 auto !important;
+    padding: 0 30px !important;
 }

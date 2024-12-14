@@ -42,14 +42,6 @@ $active_tab = isset($_GET['tab']) ? sanitize_text_field($_GET['tab']) : 'dashboa
                                href="<?php echo add_query_arg('tab', 'applications'); ?>">
                                 <i class="bi bi-briefcase me-2"></i> Applications
                             </a>
-                            <a class="nav-link <?php echo $active_tab === 'saved-jobs' ? 'active' : ''; ?>" 
-                               href="<?php echo add_query_arg('tab', 'saved-jobs'); ?>">
-                                <i class="bi bi-bookmark me-2"></i> Saved Jobs
-                            </a>
-                            <a class="nav-link <?php echo $active_tab === 'search-jobs' ? 'active' : ''; ?>" 
-                               href="<?php echo add_query_arg('tab', 'search-jobs'); ?>">
-                                <i class="bi bi-search me-2"></i> Search Jobs
-                            </a>
                         </div>
                     </div>
                 </div>
@@ -69,12 +61,6 @@ $active_tab = isset($_GET['tab']) ? sanitize_text_field($_GET['tab']) : 'dashboa
                                 break;
                             case 'applications':
                                 get_template_part('template-parts/dashboard/employee', 'applications');
-                                break;
-                            case 'saved-jobs':
-                                get_template_part('template-parts/dashboard/employee', 'saved-jobs');
-                                break;
-                            case 'search-jobs':
-                                get_template_part('template-parts/dashboard/employee', 'search-jobs');
                                 break;
                             default:
                                 get_template_part('template-parts/dashboard/employee', 'overview');

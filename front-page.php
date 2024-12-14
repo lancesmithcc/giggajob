@@ -36,14 +36,15 @@ $remote_options = array(
 
 <div class="front-page">
     <!-- Hero Section with Search -->
-    <section class="hero bg-primary text-white py-5">
+    <section class="hero heady">
         <div class="container">
             <div class="row justify-content-center">
                 <div class="col-md-10">
-                    <h1 class="display-4 text-center mb-4">Find Your Dream Job</h1>
+					<a href="<?php echo home_url(); ?>"><img src="<?php echo get_stylesheet_directory_uri(); ?>/assets/img/logo.png" alt="GIGGAJOB" class="frontlogo"></a>
+                    
                     
                     <!-- Search Form -->
-                    <form action="<?php echo esc_url(home_url('/')); ?>" method="get" class="job-search-form bg-white p-4 rounded shadow">
+                    <form action="<?php echo esc_url(home_url('/')); ?>" method="get">
                         <div class="row g-3">
                             <!-- Keyword Search -->
                             <div class="col-md-12">
@@ -110,7 +111,7 @@ $remote_options = array(
     </section>
 
     <!-- Job Listings Section -->
-    <section class="job-listings py-5">
+    <section class="job-listings">
         <div class="container">
             <?php
             // Build query arguments
@@ -252,7 +253,7 @@ $remote_options = array(
                                         <?php echo wp_trim_words(get_the_content(), 20); ?>
                                     </div>
                                 </div>
-                                <div class="card-footer bg-white border-top-0">
+                                <div class="card-footer border-top-0">
                                     <div class="d-flex justify-content-between align-items-center">
                                         <small class="text-muted">
                                             Posted <?php echo human_time_diff(get_the_time('U'), current_time('timestamp')); ?> ago
@@ -296,7 +297,7 @@ $remote_options = array(
     </section>
 
     <!-- Featured Categories Section -->
-    <section class="featured-categories bg-light py-5">
+    <section class="featured-categories">
         <div class="container">
             <h2 class="h3 text-center mb-4">Browse by Industry</h2>
             <div class="row g-4">
@@ -347,7 +348,7 @@ $remote_options = array(
         </div>
     </section>
 </div>
-
+<div class="clearfix"></div>
 <script>
 jQuery(document).ready(function($) {
     // Initialize select2 for better dropdowns

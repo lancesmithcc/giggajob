@@ -270,7 +270,7 @@ add_filter('login_redirect', 'giggajob_login_redirect', 10, 3);
 
 // Enqueue scripts and styles
 function giggajob_enqueue_scripts() {
-    wp_enqueue_style('giggajob-style', get_stylesheet_uri());
+    wp_enqueue_style('giggajob-style', get_stylesheet_uri(), array(), null);
     wp_enqueue_style('bootstrap', 'https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css');
     wp_enqueue_style('bootstrap-icons', 'https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css');
     wp_enqueue_style('select2', 'https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css');

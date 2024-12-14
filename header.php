@@ -9,15 +9,9 @@
 <?php wp_body_open(); ?>
 
 <header class="site-header">
-    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+    <nav class="navbar navbar-expand-lg">
         <div class="container">
-            <?php
-            if (has_custom_logo()) {
-                the_custom_logo();
-            } else {
-                echo '<a class="navbar-brand" href="' . esc_url(home_url('/')) . '">' . get_bloginfo('name') . '</a>';
-            }
-            ?>
+        <a href="<?php echo home_url(); ?>"><img src="<?php echo get_stylesheet_directory_uri(); ?>/assets/img/logo.png" alt="GIGGAJOB" class="toplogo"></a>
             
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#primary-menu" aria-controls="primary-menu" aria-expanded="false">
                 <span class="navbar-toggler-icon"></span>

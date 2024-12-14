@@ -99,12 +99,25 @@ $jobs_query = new WP_Query($args);
                                 <strong><?php the_title(); ?></strong>
                                 <div class="small text-muted">
                                     <?php 
-                                    $categories = get_the_terms(get_the_ID(), 'job_category');
-                                    if ($categories) {
-                                        $category_names = array_map(function($cat) {
-                                            return $cat->name;
-                                        }, $categories);
-                                        echo implode(', ', $category_names);
+                                    // Show job type and location
+                                    $job_type = get_post_meta(get_the_ID(), 'job_type', true);
+                                    $job_location = get_post_meta(get_the_ID(), 'job_location', true);
+                                    $remote_option = get_post_meta(get_the_ID(), 'remote_option', true);
+                                    
+                                    if ($job_type) echo '<i class="bi bi-briefcase me-1"></i>' . esc_html($job_type);
+                                    if ($job_location) echo ' • <i class="bi bi-geo-alt me-1"></i>' . esc_html($job_location);
+                                    if ($remote_option === 'yes') echo ' • <i class="bi bi-laptop me-1"></i>Remote';
+                                    else if ($remote_option === 'hybrid') echo ' • <i class="bi bi-laptop me-1"></i>Hybrid';
+                                    ?>
+                                </div>
+                                <div class="small text-muted mt-1">
+                                    <?php 
+                                    // Show salary information
+                                    $salary = get_post_meta(get_the_ID(), 'salary', true);
+                                    $salary_period = get_post_meta(get_the_ID(), 'salary_period', true);
+                                    if ($salary && $salary !== 'legal exemption for non-disclosure') {
+                                        echo '<i class="bi bi-currency-dollar me-1"></i>' . esc_html($salary);
+                                        if ($salary_period) echo ' per ' . esc_html($salary_period);
                                     }
                                     ?>
                                 </div>
