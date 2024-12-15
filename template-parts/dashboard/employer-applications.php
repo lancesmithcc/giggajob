@@ -209,6 +209,12 @@ if (current_user_can('administrator')) {
                                             <i class="bi bi-file-person"></i>
                                         </a>
                                     <?php endif; ?>
+                                    <button type="button" 
+                                            class="btn btn-sm btn-outline-info toggle-cover-letter" 
+                                            data-application-id="<?php echo get_the_ID(); ?>"
+                                            title="View Cover Letter">
+                                        <i class="bi bi-envelope"></i>
+                                    </button>
                                     <?php if ($status === 'pending'): ?>
                                         <button type="button" 
                                                 class="btn btn-sm btn-outline-success toggle-interview-form" 
@@ -244,6 +250,17 @@ if (current_user_can('administrator')) {
                                             <i class="bi bi-calendar-x"></i>
                                         </button>
                                     <?php endif; ?>
+                                </div>
+                            </td>
+                        </tr>
+                        <!-- Cover Letter Row -->
+                        <tr class="cover-letter-row bg-dark d-none" id="cover-letter-<?php echo get_the_ID(); ?>">
+                            <td colspan="6">
+                                <div class="p-3 border border-secondary rounded">
+                                    <h6 class="mb-3 text-light">Cover Letter</h6>
+                                    <div class="cover-letter-content text-[#ccc]">
+                                        <?php echo nl2br(get_post_field('post_content', get_the_ID())); ?>
+                                    </div>
                                 </div>
                             </td>
                         </tr>
@@ -384,6 +401,9 @@ jQuery(document).ready(function($) {
         formData.append('action', 'handle_interview_schedule');
         formData.append('nonce', giggajob_ajax.nonce);
         
+        // Debug output
+        console.log('Sending request with nonce:', giggajob_ajax.nonce);
+        
         $.ajax({
             url: giggajob_ajax.ajax_url,
             type: 'POST',
@@ -396,6 +416,9 @@ jQuery(document).ready(function($) {
                 );
             },
             success: function(response) {
+                // Debug output
+                console.log('Server response:', response);
+                
                 if (response.success) {
                     location.reload();
                 } else {
@@ -403,7 +426,12 @@ jQuery(document).ready(function($) {
                 }
             },
             error: function(xhr, status, error) {
-                console.error('AJAX Error:', status, error);
+                // Debug output
+                console.error('AJAX Error:', {
+                    status: status,
+                    error: error,
+                    response: xhr.responseText
+                });
                 alert('An error occurred while scheduling the interview. Please try again.');
             },
             complete: function() {
@@ -486,6 +514,12 @@ jQuery(document).ready(function($) {
     $('.toggle-interview-details').click(function() {
         var applicationId = $(this).data('application-id');
         $('#interview-details-' + applicationId).toggleClass('d-none');
+    });
+
+    // Toggle cover letter
+    $('.toggle-cover-letter').click(function() {
+        var applicationId = $(this).data('application-id');
+        $('#cover-letter-' + applicationId).toggleClass('d-none');
     });
 });
 </script> 

@@ -30,54 +30,26 @@ $selected_category = isset($_GET['category']) ? sanitize_text_field($_GET['categ
 $selected_location = isset($_GET['location']) ? sanitize_text_field($_GET['location']) : '';
 $selected_type = isset($_GET['type']) ? sanitize_text_field($_GET['type']) : '';
 
-// Build search query
+// Simplified query to get all jobs first
 $args = [
-    'post_type' => 'job',
-    'posts_per_page' => 10,
-    'paged' => get_query_var('paged') ? get_query_var('paged') : 1,
-    'post_status' => 'publish', // Only show published jobs to employees
+    'post_type' => 'jobs',
+    'posts_per_page' => -1, // Get all posts for debugging
+    'post_status' => ['publish', 'draft', 'pending'], // Include all statuses for debugging
 ];
 
-// Add search query if provided
-if (!empty($search_query)) {
-    $args['s'] = $search_query;
-}
-
-// Add meta query for filters
-$meta_query = [];
-
-if (!empty($selected_location)) {
-    $meta_query[] = [
-        'key' => 'job_location',
-        'value' => $selected_location,
-        'compare' => '='
-    ];
-}
-
-if (!empty($selected_type)) {
-    $meta_query[] = [
-        'key' => 'job_type',
-        'value' => $selected_type,
-        'compare' => '='
-    ];
-}
-
-if (!empty($meta_query)) {
-    $args['meta_query'] = $meta_query;
-}
-
-// Add taxonomy query if category selected
-if (!empty($selected_category)) {
-    $args['tax_query'] = [
-        [
-            'taxonomy' => 'job_category',
-            'field' => 'slug',
-            'terms' => $selected_category
-        ]
-    ];
-}
-
 $jobs_query = new WP_Query($args);
+
+// Debug information
+if (current_user_can('administrator')) {
+    echo '<div class="alert alert-info">';
+    echo '<h5>Debug Information:</h5>';
+    echo '<pre>';
+    echo 'Total posts found: ' . $jobs_query->found_posts . "\n";
+    echo 'Query parameters: ' . print_r($args, true) . "\n";
+    echo 'Last SQL Query: ' . $jobs_query->request . "\n";
+    echo '</pre>';
+    echo '</div>';
+}
 
 // Get current user's applications
 $current_user_id = get_current_user_id();
@@ -212,6 +184,7 @@ foreach ($user_applications as $application_id) {
                             ]);
                             $company_name = !empty($employer_profile) ? get_the_title($employer_profile[0]) : 'Unknown Company';
                             $has_applied = in_array($job_id, $applied_job_ids);
+                            $show_application_form = isset($_GET['apply']) && $_GET['apply'] == $job_id;
                         ?>
                             <tr>
                                 <td>
@@ -234,13 +207,69 @@ foreach ($user_applications as $application_id) {
                                             <i class="bi bi-check-circle"></i> Applied
                                         </button>
                                     <?php else: ?>
-                                        <a href="<?php echo add_query_arg(['action' => 'apply', 'job_id' => $job_id], get_permalink()); ?>" 
+                                        <a href="<?php echo add_query_arg(['tab' => 'search', 'apply' => $job_id]); ?>" 
                                            class="btn btn-sm btn-outline-primary">
                                             <i class="bi bi-send"></i> Apply
                                         </a>
                                     <?php endif; ?>
                                 </td>
                             </tr>
+                            <?php if ($show_application_form): 
+                                // Get the user's resume
+                                $resume = get_posts([
+                                    'post_type' => 'resume',
+                                    'author' => get_current_user_id(),
+                                    'posts_per_page' => 1
+                                ]);
+                                
+                                if (empty($resume)): ?>
+                                    <tr class="application-form-row">
+                                        <td colspan="8">
+                                            <div class="alert alert-warning">
+                                                <i class="bi bi-exclamation-triangle me-2"></i>
+                                                Please create your resume first before applying for jobs.
+                                                <a href="<?php echo add_query_arg('tab', 'resume'); ?>" class="btn btn-warning btn-sm ms-3">
+                                                    Create Resume
+                                                </a>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                <?php else: ?>
+                                    <tr class="application-form-row">
+                                        <td colspan="8">
+                                            <div class="card bg-dark border-secondary">
+                                                <div class="card-body">
+                                                    <h5 class="card-title">Apply for <?php the_title(); ?></h5>
+                                                    <form action="" method="post" class="job-application-form" id="job-application-form-<?php echo $job_id; ?>">
+                                                        <?php wp_nonce_field('submit_job_application', 'job_application_nonce'); ?>
+                                                        <input type="hidden" name="action" value="submit_job_application">
+                                                        <input type="hidden" name="job_id" value="<?php echo $job_id; ?>">
+                                                        <input type="hidden" name="resume_id" value="<?php echo $resume[0]->ID; ?>">
+                                                        
+                                                        <div class="mb-3">
+                                                            <label for="cover_letter" class="form-label">Cover Letter</label>
+                                                            <textarea class="form-control bg-dark text-light border-secondary" 
+                                                                    id="cover_letter" name="cover_letter" rows="5" 
+                                                                    placeholder="Tell us why you're a great fit for this position..." 
+                                                                    required></textarea>
+                                                        </div>
+
+                                                        <div class="d-flex justify-content-between">
+                                                            <button type="submit" class="btn btn-primary">
+                                                                <i class="bi bi-send me-2"></i>Submit Application
+                                                            </button>
+                                                            <a href="<?php echo remove_query_arg('apply'); ?>" 
+                                                            class="btn btn-secondary">
+                                                                <i class="bi bi-x-circle me-2"></i>Cancel
+                                                            </a>
+                                                        </div>
+                                                    </form>
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                <?php endif; ?>
+                            <?php endif; ?>
                         <?php endwhile; ?>
                     </tbody>
                 </table>
@@ -260,6 +289,35 @@ foreach ($user_applications as $application_id) {
             ]);
             echo '</div>';
             ?>
+
+            <script>
+            jQuery(document).ready(function($) {
+                $('.job-application-form').on('submit', function(e) {
+                    e.preventDefault();
+                    var form = $(this);
+                    var submitBtn = form.find('button[type="submit"]');
+                    submitBtn.prop('disabled', true);
+
+                    $.ajax({
+                        url: giggajob_ajax.ajax_url,
+                        type: 'POST',
+                        data: form.serialize(),
+                        success: function(response) {
+                            if (response.success) {
+                                window.location.href = window.location.href.split('?')[0] + '?tab=applications';
+                            } else {
+                                alert(response.data.message || 'Application submission failed.');
+                                submitBtn.prop('disabled', false);
+                            }
+                        },
+                        error: function() {
+                            alert('An error occurred. Please try again.');
+                            submitBtn.prop('disabled', false);
+                        }
+                    });
+                });
+            });
+            </script>
 
         <?php else: ?>
             <div class="alert alert-info">
@@ -295,5 +353,13 @@ foreach ($user_applications as $application_id) {
 }
 .pagination .page-numbers.dots {
     color: #6c757d;
+}
+
+/* Application form styles */
+.application-form-row {
+    background-color: #2b3035;
+}
+.application-form-row td {
+    padding: 1rem !important;
 }
 </style> 

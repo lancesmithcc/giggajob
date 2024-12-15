@@ -34,9 +34,11 @@ $selected_salary_max = isset($_GET['salary_max']) ? intval($_GET['salary_max']) 
 
 // Build search query
 $args = [
-    'post_type' => 'job',
+    'post_type' => 'jobs',
     'posts_per_page' => 10,
     'paged' => get_query_var('paged') ? get_query_var('paged') : 1,
+    'post_status' => ['publish', 'draft', 'pending'],
+    'author' => get_current_user_id() // Only show employer's own jobs
 ];
 
 // Add search query if provided
@@ -98,6 +100,18 @@ if (!empty($selected_category)) {
 }
 
 $jobs_query = new WP_Query($args);
+
+// Debug information
+if (current_user_can('administrator')) {
+    echo '<div class="alert alert-info">';
+    echo '<h5>Debug Information:</h5>';
+    echo '<pre>';
+    echo 'Total posts found: ' . $jobs_query->found_posts . "\n";
+    echo 'Query parameters: ' . print_r($args, true) . "\n";
+    echo 'Last SQL Query: ' . $jobs_query->request . "\n";
+    echo '</pre>';
+    echo '</div>';
+}
 ?>
 
 <div class="card bg-dark border-secondary mb-4">
@@ -119,7 +133,7 @@ $jobs_query = new WP_Query($args);
                 </div>
 
                 <!-- Category Filter -->
-                <div class="col-md-3">
+                <div class="col-md-4">
                     <div class="form-floating">
                         <select class="form-select bg-dark text-light border-secondary" 
                                 id="category" name="category">
@@ -136,7 +150,7 @@ $jobs_query = new WP_Query($args);
                 </div>
 
                 <!-- Location Filter -->
-                <div class="col-md-3">
+                <div class="col-md-4">
                     <div class="form-floating">
                         <select class="form-select bg-dark text-light border-secondary" 
                                 id="location" name="location">
@@ -153,7 +167,7 @@ $jobs_query = new WP_Query($args);
                 </div>
 
                 <!-- Employment Type Filter -->
-                <div class="col-md-3">
+                <div class="col-md-4">
                     <div class="form-floating">
                         <select class="form-select bg-dark text-light border-secondary" 
                                 id="type" name="type">
@@ -169,25 +183,13 @@ $jobs_query = new WP_Query($args);
                     </div>
                 </div>
 
-                <!-- Salary Range -->
-                <div class="col-md-3">
-                    <div class="input-group">
-                        <input type="number" class="form-control bg-dark text-light border-secondary" 
-                               placeholder="Min Salary" name="salary_min" 
-                               value="<?php echo esc_attr($selected_salary_min); ?>">
-                        <input type="number" class="form-control bg-dark text-light border-secondary" 
-                               placeholder="Max Salary" name="salary_max" 
-                               value="<?php echo esc_attr($selected_salary_max); ?>">
-                    </div>
-                </div>
-
                 <!-- Search Button -->
                 <div class="col-12">
                     <button type="submit" class="btn btn-primary">
                         <i class="bi bi-search me-2"></i>Search
                     </button>
                     <?php if (!empty($_GET)): ?>
-                        <a href="<?php echo add_query_arg('tab', 'search', remove_query_arg(['job_search', 'category', 'location', 'type', 'salary_min', 'salary_max'])); ?>" 
+                        <a href="<?php echo add_query_arg('tab', 'search', remove_query_arg(['job_search', 'category', 'location', 'type'])); ?>" 
                            class="btn btn-secondary ms-2">
                             <i class="bi bi-x-circle me-2"></i>Clear Filters
                         </a>
@@ -207,6 +209,7 @@ $jobs_query = new WP_Query($args);
                             <th>Location</th>
                             <th>Type</th>
                             <th>Salary</th>
+                            <th>Status</th>
                             <th>Posted</th>
                             <th>Actions</th>
                         </tr>
@@ -218,26 +221,60 @@ $jobs_query = new WP_Query($args);
                             $job_location = get_post_meta($job_id, 'job_location', true);
                             $job_type = get_post_meta($job_id, 'job_type', true);
                             $job_salary = get_post_meta($job_id, 'job_salary', true);
+                            $job_status = get_post_status();
+                            
+                            // Get application count
+                            $applications = get_posts([
+                                'post_type' => 'job_application',
+                                'meta_query' => [
+                                    [
+                                        'key' => 'job_id',
+                                        'value' => $job_id
+                                    ]
+                                ],
+                                'posts_per_page' => -1,
+                                'fields' => 'ids'
+                            ]);
+                            $application_count = count($applications);
                         ?>
                             <tr>
                                 <td>
                                     <a href="<?php the_permalink(); ?>" class="text-decoration-none">
                                         <?php the_title(); ?>
                                     </a>
+                                    <div class="small text-muted">
+                                        <?php echo $application_count; ?> application<?php echo $application_count !== 1 ? 's' : ''; ?>
+                                    </div>
                                 </td>
                                 <td><?php echo implode(', ', $job_category); ?></td>
                                 <td><?php echo esc_html($job_location); ?></td>
                                 <td><?php echo esc_html($job_type); ?></td>
                                 <td><?php echo esc_html($job_salary); ?></td>
+                                <td>
+                                    <span class="badge bg-<?php 
+                                        echo $job_status === 'publish' ? 'success' : 
+                                            ($job_status === 'draft' ? 'warning' : 'secondary'); 
+                                    ?>">
+                                        <?php echo ucfirst($job_status); ?>
+                                    </span>
+                                </td>
                                 <td><?php echo get_the_date(); ?></td>
                                 <td>
-                                    <a href="<?php the_permalink(); ?>" class="btn btn-sm btn-primary">
-                                        <i class="bi bi-eye"></i>
-                                    </a>
-                                    <a href="<?php echo add_query_arg(['tab' => 'manage-jobs', 'action' => 'edit', 'job_id' => $job_id]); ?>" 
-                                       class="btn btn-sm btn-warning">
-                                        <i class="bi bi-pencil"></i>
-                                    </a>
+                                    <div class="btn-group">
+                                        <a href="<?php the_permalink(); ?>" class="btn btn-sm btn-primary" title="View">
+                                            <i class="bi bi-eye"></i>
+                                        </a>
+                                        <a href="<?php echo add_query_arg(['tab' => 'post-job', 'job_id' => $job_id]); ?>" 
+                                           class="btn btn-sm btn-warning" title="Edit">
+                                            <i class="bi bi-pencil"></i>
+                                        </a>
+                                        <?php if ($application_count > 0): ?>
+                                            <a href="<?php echo add_query_arg(['tab' => 'applications', 'job_id' => $job_id]); ?>" 
+                                               class="btn btn-sm btn-info" title="View Applications">
+                                                <i class="bi bi-people"></i>
+                                            </a>
+                                        <?php endif; ?>
+                                    </div>
                                 </td>
                             </tr>
                         <?php endwhile; ?>

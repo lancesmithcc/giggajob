@@ -317,14 +317,19 @@ add_filter('login_redirect', 'giggajob_login_redirect', 10, 3);
 
 // Enqueue scripts and styles
 function giggajob_enqueue_scripts() {
-    wp_enqueue_style('giggajob-style', get_stylesheet_uri(), array(), null);
+    wp_enqueue_style('giggajob-style', get_stylesheet_uri(), array('dashicons'), null);
     wp_enqueue_style('bootstrap', 'https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css');
     wp_enqueue_style('bootstrap-icons', 'https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css');
     wp_enqueue_style('select2', 'https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css');
     wp_enqueue_style('select2-bootstrap5', 'https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css');
 
-    // Enqueue dashicons for the editor
+    // Enqueue dashicons for the editor and make sure it loads before our theme styles
     wp_enqueue_style('dashicons');
+    
+    // Add admin bar styles if showing
+    if (is_admin_bar_showing()) {
+        wp_enqueue_style('admin-bar');
+    }
 
     // Enqueue scripts
     wp_enqueue_script('bootstrap', 'https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js', array('jquery'), null, true);
@@ -349,6 +354,7 @@ add_action('wp_enqueue_scripts', 'giggajob_enqueue_scripts');
 function giggajob_admin_enqueue_scripts() {
     wp_enqueue_style('dashicons');
     wp_enqueue_style('wp-admin');
+    wp_enqueue_style('giggajob-admin', get_template_directory_uri() . '/assets/css/admin.css', array('dashicons', 'wp-admin'), null);
 }
 add_action('admin_enqueue_scripts', 'giggajob_admin_enqueue_scripts');
 
@@ -367,6 +373,12 @@ function giggajob_admin_bar_style() {
                 html {
                     margin-top: 46px !important;
                 }
+            }
+            /* Ensure admin bar icons use correct font */
+            #wpadminbar .ab-icon,
+            #wpadminbar .ab-item:before,
+            #wpadminbar>#wp-toolbar>#wp-admin-bar-root-default .ab-icon {
+                font: normal 20px/1 dashicons !important;
             }
         </style>
         <?php
@@ -1385,13 +1397,19 @@ function giggajob_handle_application_action() {
 // Handle Interview Scheduling
 add_action('wp_ajax_handle_interview_schedule', 'giggajob_handle_interview_schedule');
 function giggajob_handle_interview_schedule() {
+    // Debug output
+    error_log('Interview Schedule Handler - POST data: ' . print_r($_POST, true));
+    error_log('Interview Schedule Handler - Nonce: ' . (isset($_POST['nonce']) ? $_POST['nonce'] : 'not set'));
+    
     // Check nonce
-    if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'giggajob_nonce')) {
+    if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'giggajob_ajax_nonce')) {
+        error_log('Interview Schedule Handler - Nonce verification failed');
         wp_send_json_error(array('message' => 'Security check failed.'));
     }
 
     // Check if user is logged in and is an employer
     if (!is_user_logged_in() || !in_array('employer', wp_get_current_user()->roles)) {
+        error_log('Interview Schedule Handler - Permission denied: User not logged in or not an employer');
         wp_send_json_error(array('message' => 'Permission denied.'));
     }
 
@@ -1405,6 +1423,7 @@ function giggajob_handle_interview_schedule() {
 
     foreach ($required_fields as $field => $label) {
         if (empty($_POST[$field])) {
+            error_log('Interview Schedule Handler - Missing required field: ' . $field);
             wp_send_json_error(array('message' => $label . ' is required.'));
         }
     }
@@ -1414,6 +1433,7 @@ function giggajob_handle_interview_schedule() {
     // Get the application
     $application = get_post($application_id);
     if (!$application || $application->post_type !== 'job_application') {
+        error_log('Interview Schedule Handler - Invalid application ID: ' . $application_id);
         wp_send_json_error(array('message' => 'Invalid application.'));
     }
 
@@ -1423,6 +1443,7 @@ function giggajob_handle_interview_schedule() {
 
     // Verify ownership
     if (!$job || $job->post_author != get_current_user_id()) {
+        error_log('Interview Schedule Handler - Permission denied: Job ownership verification failed');
         wp_send_json_error(array('message' => 'Permission denied.'));
     }
 
@@ -1436,6 +1457,7 @@ function giggajob_handle_interview_schedule() {
         update_post_meta($application_id, 'interview_message', sanitize_textarea_field($_POST['interview_message']));
     }
 
+    error_log('Interview Schedule Handler - Successfully scheduled interview for application: ' . $application_id);
     wp_send_json_success(array('message' => 'Interview scheduled successfully.'));
 }
 
@@ -1521,4 +1543,93 @@ function giggajob_change_user_password() {
     wp_signon($creds, false);
 
     wp_send_json_success(array('message' => 'Password updated successfully.'));
+}
+
+// Handle Job Application Submission
+add_action('wp_ajax_submit_job_application', 'giggajob_handle_job_application');
+function giggajob_handle_job_application() {
+    // Check nonce
+    if (!isset($_POST['job_application_nonce']) || !wp_verify_nonce($_POST['job_application_nonce'], 'submit_job_application')) {
+        wp_send_json_error(['message' => 'Security check failed.']);
+    }
+
+    // Check if user is logged in and is an employee
+    if (!is_user_logged_in() || !in_array('employee', wp_get_current_user()->roles)) {
+        wp_send_json_error(['message' => 'Permission denied.']);
+    }
+
+    // Validate required fields
+    if (empty($_POST['job_id']) || empty($_POST['cover_letter']) || empty($_POST['resume_id'])) {
+        wp_send_json_error(['message' => 'Please fill in all required fields.']);
+    }
+
+    $job_id = intval($_POST['job_id']);
+    $resume_id = intval($_POST['resume_id']);
+    $cover_letter = wp_kses_post($_POST['cover_letter']);
+
+    // Verify job exists and is published
+    $job = get_post($job_id);
+    if (!$job || $job->post_type !== 'jobs' || $job->post_status !== 'publish') {
+        wp_send_json_error(['message' => 'Invalid job posting.']);
+    }
+
+    // Verify resume exists and belongs to user
+    $resume = get_post($resume_id);
+    if (!$resume) {
+        wp_send_json_error(['message' => 'Resume not found.']);
+    }
+    
+    if ($resume->post_type !== 'resume') {
+        wp_send_json_error(['message' => 'Invalid resume type.']);
+    }
+    
+    if ($resume->post_author != get_current_user_id()) {
+        wp_send_json_error(['message' => 'This resume does not belong to you.']);
+    }
+
+    // Check if already applied
+    $existing_application = get_posts([
+        'post_type' => 'job_application',
+        'author' => get_current_user_id(),
+        'meta_query' => [
+            [
+                'key' => 'job_id',
+                'value' => $job_id
+            ]
+        ],
+        'posts_per_page' => 1
+    ]);
+
+    if (!empty($existing_application)) {
+        wp_send_json_error(['message' => 'You have already applied for this job.']);
+    }
+
+    // Create application
+    $application_data = [
+        'post_title' => sprintf('Application for %s by %s', 
+                              $job->post_title, 
+                              wp_get_current_user()->display_name),
+        'post_content' => $cover_letter,
+        'post_status' => 'publish',
+        'post_type' => 'job_application',
+        'post_author' => get_current_user_id()
+    ];
+
+    $application_id = wp_insert_post($application_data);
+
+    if (is_wp_error($application_id)) {
+        wp_send_json_error(['message' => 'Failed to submit application.']);
+    }
+
+    // Save application meta
+    update_post_meta($application_id, 'job_id', $job_id);
+    update_post_meta($application_id, 'resume_id', $resume_id);
+    update_post_meta($application_id, 'status', 'pending');
+    update_post_meta($application_id, 'application_date', current_time('mysql'));
+
+    // Send notification to employer
+    $employer_id = $job->post_author;
+    // TODO: Add notification system
+
+    wp_send_json_success(['message' => 'Application submitted successfully!']);
 }

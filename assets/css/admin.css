@@ -1,0 +1,67 @@
+/* Admin-specific styles */
+
+/* Ensure Dashicons are displayed correctly */
+.dashicons,
+.dashicons-before:before {
+    font-family: dashicons !important;
+    font-style: normal;
+    font-weight: normal;
+    font-variant: normal;
+    text-transform: none;
+    line-height: 1;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* TinyMCE Editor Icons */
+.mce-ico {
+    font-family: 'tinymce', dashicons !important;
+    font-style: normal;
+    font-weight: normal;
+    font-variant: normal;
+    text-transform: none;
+    line-height: 1;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* Admin Bar Icons */
+#wpadminbar .ab-icon,
+#wpadminbar .ab-item:before,
+#wpadminbar>#wp-toolbar>#wp-admin-bar-root-default .ab-icon {
+    font: normal 20px/1 dashicons !important;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* Editor Buttons */
+.wp-editor-wrap .mce-btn i,
+.wp-editor-wrap .mce-btn i:before {
+    font-family: 'tinymce', dashicons !important;
+}
+
+/* Quick Tags Editor Buttons */
+.quicktags-toolbar input.button.button-small {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif !important;
+}
+
+/* Media Modal Icons */
+.media-modal .media-toolbar .media-toolbar-secondary .media-button .dashicons {
+    font-family: dashicons !important;
+}
+
+/* Admin Menu Icons */
+#adminmenu .wp-menu-image:before {
+    font-family: dashicons !important;
+}
+
+/* Post Edit Screen Icons */
+.post-format-icon:before,
+.post-state-format:before {
+    font-family: dashicons !important;
+}
+
+/* Ensure editor content uses system font */
+.wp-editor-container textarea.wp-editor-area {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif !important;
+} 

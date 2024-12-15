@@ -21,7 +21,82 @@ Tags: jobs, employment, resume, job-board, bootstrap
     box-sizing: border-box;
     margin: 0;
     padding: 0;
+}
+
+/* Set Poppins as default font but exclude specific elements */
+body,
+input:not(.dashicons),
+textarea,
+select,
+button:not(.dashicons-before):not(.wp-not-current-submenu):not(.menu-top),
+div:not(.dashicons):not(.dashicons-before),
+p,
+span:not(.dashicons):not(.dashicons-before),
+a:not(.dashicons):not(.dashicons-before) {
     font-family: 'Poppins', sans-serif;
+}
+
+/* Ensure Dashicons font is preserved */
+.dashicons,
+.dashicons-before:before,
+#wpadminbar *,
+.wp-editor-area,
+.wp-editor-container *,
+.mce-ico,
+.mce-toolbar .mce-btn button,
+.wp-editor-wrap .mce-btn i {
+    font-family: dashicons !important;
+}
+
+/* TinyMCE specific icons */
+.mce-ico {
+    font-family: 'tinymce', dashicons !important;
+}
+
+/* WordPress Editor Icons */
+.wp-editor-wrap .mce-btn i.mce-i-bold,
+.wp-editor-wrap .mce-btn i.mce-i-italic,
+.wp-editor-wrap .mce-btn i.mce-i-bullist,
+.wp-editor-wrap .mce-btn i.mce-i-numlist,
+.wp-editor-wrap .mce-btn i.mce-i-blockquote,
+.wp-editor-wrap .mce-btn i.mce-i-alignleft,
+.wp-editor-wrap .mce-btn i.mce-i-aligncenter,
+.wp-editor-wrap .mce-btn i.mce-i-alignright,
+.wp-editor-wrap .mce-btn i.mce-i-link,
+.wp-editor-wrap .mce-btn i.mce-i-unlink,
+.wp-editor-wrap .mce-btn i.mce-i-wp_more,
+.wp-editor-wrap .mce-btn i.mce-i-strikethrough,
+.wp-editor-wrap .mce-btn i.mce-i-spellchecker,
+.wp-editor-wrap .mce-btn i.mce-i-fullscreen,
+.wp-editor-wrap .mce-btn i.mce-i-wp_adv,
+.wp-editor-wrap .mce-btn i.mce-i-underline,
+.wp-editor-wrap .mce-btn i.mce-i-alignjustify,
+.wp-editor-wrap .mce-btn i.mce-i-forecolor,
+.wp-editor-wrap .mce-btn i.mce-i-backcolor,
+.wp-editor-wrap .mce-btn i.mce-i-pastetext,
+.wp-editor-wrap .mce-btn i.mce-i-pasteword,
+.wp-editor-wrap .mce-btn i.mce-i-removeformat,
+.wp-editor-wrap .mce-btn i.mce-i-charmap,
+.wp-editor-wrap .mce-btn i.mce-i-outdent,
+.wp-editor-wrap .mce-btn i.mce-i-indent,
+.wp-editor-wrap .mce-btn i.mce-i-undo,
+.wp-editor-wrap .mce-btn i.mce-i-redo,
+.wp-editor-wrap .mce-btn i.mce-i-help,
+.wp-editor-wrap .mce-btn i.mce-i-wp_help,
+.wp-editor-wrap .mce-btn i.mce-i-wp_code,
+.wp-editor-wrap .mce-btn i.mce-i-wp_page,
+.wp-editor-wrap .mce-btn i.mce-i-hr,
+.wp-editor-wrap .mce-btn i.mce-i-wp_more,
+.wp-editor-wrap .mce-btn i.mce-i-embed,
+.wp-editor-wrap .mce-btn i.mce-i-wp_adv {
+    font-family: 'tinymce', dashicons !important;
+}
+
+/* Admin bar specific styles */
+#wpadminbar .ab-icon,
+#wpadminbar .ab-item:before,
+#wpadminbar>#wp-toolbar>#wp-admin-bar-root-default .ab-icon {
+    font: normal 20px/1 dashicons !important;
 }
 
 html {
