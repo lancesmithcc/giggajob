@@ -182,7 +182,7 @@ small {
 .hero h1 {
     color: #fff;
 }
-
+.job-single{background-color:#131313 !important;color:#fff;}
 .job-search-form {
     background-color: #171717 !important;
     border: 1px solid #333;

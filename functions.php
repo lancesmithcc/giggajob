@@ -1476,15 +1476,40 @@ function giggajob_update_notification_preferences() {
 
     // Parse the form data
     parse_str($_POST['preferences'], $preferences);
-    $notifications = isset($preferences['notifications']) ? $preferences['notifications'] : array();
-
-    // Sanitize each preference
-    $notifications = array_map('sanitize_text_field', $notifications);
+    
+    // Initialize notifications array
+    $notifications = array();
+    
+    // Get user role to determine which preferences to save
+    $user = wp_get_current_user();
+    if (in_array('employer', $user->roles)) {
+        $default_prefs = array(
+            'new_application' => false,
+            'application_withdrawn' => false,
+            'resume_updated' => false
+        );
+    } else {
+        $default_prefs = array(
+            'application_status' => false,
+            'interview_scheduled' => false,
+            'job_recommendations' => false,
+            'saved_job_expiring' => false
+        );
+    }
+    
+    // Get submitted notifications or use defaults
+    if (isset($preferences['notifications']) && is_array($preferences['notifications'])) {
+        foreach ($default_prefs as $key => $default) {
+            $notifications[$key] = isset($preferences['notifications'][$key]) ? true : false;
+        }
+    } else {
+        $notifications = $default_prefs;
+    }
 
     // Save preferences
     $result = update_user_meta(get_current_user_id(), 'notification_preferences', $notifications);
 
-    if ($result) {
+    if ($result !== false) {
         wp_send_json_success(array('message' => 'Notification preferences updated successfully.'));
     } else {
         wp_send_json_error(array('message' => 'Failed to update notification preferences.'));
@@ -1530,17 +1555,18 @@ function giggajob_change_user_password() {
         wp_send_json_error(array('message' => 'Password must contain at least one number.'));
     }
 
+    // Verify passwords match
+    if ($new_password !== $_POST['confirm_password']) {
+        wp_send_json_error(array('message' => 'Passwords do not match.'));
+    }
+
     // Update password
     wp_set_password($new_password, $current_user->ID);
 
     // Log the user back in
-    $creds = array(
-        'user_login' => $current_user->user_login,
-        'user_password' => $new_password,
-        'remember' => true
-    );
-
-    wp_signon($creds, false);
+    wp_clear_auth_cookie();
+    wp_set_current_user($current_user->ID);
+    wp_set_auth_cookie($current_user->ID, true);
 
     wp_send_json_success(array('message' => 'Password updated successfully.'));
 }
@@ -1633,3 +1659,166 @@ function giggajob_handle_job_application() {
 
     wp_send_json_success(['message' => 'Application submitted successfully!']);
 }
+
+// Handle User Registration
+add_action('wp_ajax_nopriv_register_user', 'giggajob_handle_user_registration');
+add_action('wp_ajax_register_user', 'giggajob_handle_user_registration');
+function giggajob_handle_user_registration() {
+    // Parse form data
+    parse_str($_POST['form_data'], $form_data);
+
+    // Get and validate role
+    $role = isset($form_data['role']) ? sanitize_text_field($form_data['role']) : '';
+    if (!in_array($role, ['employee', 'employer'])) {
+        wp_send_json_error(array('message' => 'Invalid user role.'));
+    }
+
+    // Verify nonce
+    $nonce_action = $role === 'employer' ? 'employer_registration' : 'employee_registration';
+    if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], $nonce_action)) {
+        wp_send_json_error(array('message' => 'Security check failed.'));
+    }
+
+    // Validate required fields
+    $required_fields = array(
+        'username' => 'Username',
+        'email' => 'Email',
+        'password' => 'Password',
+        'confirm_password' => 'Confirm Password',
+        'first_name' => 'First Name',
+        'last_name' => 'Last Name'
+    );
+
+    if ($role === 'employer') {
+        $required_fields['company_name'] = 'Company Name';
+    }
+
+    foreach ($required_fields as $field => $label) {
+        if (empty($form_data[$field])) {
+            wp_send_json_error(array('message' => $label . ' is required.'));
+        }
+    }
+
+    // Validate email
+    if (!is_email($form_data['email'])) {
+        wp_send_json_error(array('message' => 'Please enter a valid email address.'));
+    }
+
+    // Check if email already exists
+    if (email_exists($form_data['email'])) {
+        wp_send_json_error(array('message' => 'This email address is already registered.'));
+    }
+
+    // Check if username already exists
+    if (username_exists($form_data['username'])) {
+        wp_send_json_error(array('message' => 'This username is already taken.'));
+    }
+
+    // Validate password
+    if (strlen($form_data['password']) < 8) {
+        wp_send_json_error(array('message' => 'Password must be at least 8 characters long.'));
+    }
+
+    if (!preg_match('/[A-Z]/', $form_data['password'])) {
+        wp_send_json_error(array('message' => 'Password must contain at least one uppercase letter.'));
+    }
+
+    if (!preg_match('/[a-z]/', $form_data['password'])) {
+        wp_send_json_error(array('message' => 'Password must contain at least one lowercase letter.'));
+    }
+
+    if (!preg_match('/[0-9]/', $form_data['password'])) {
+        wp_send_json_error(array('message' => 'Password must contain at least one number.'));
+    }
+
+    // Verify passwords match
+    if ($form_data['password'] !== $form_data['confirm_password']) {
+        wp_send_json_error(array('message' => 'Passwords do not match.'));
+    }
+
+    // Create user
+    $userdata = array(
+        'user_login' => $form_data['username'],
+        'user_email' => $form_data['email'],
+        'user_pass' => $form_data['password'],
+        'first_name' => $form_data['first_name'],
+        'last_name' => $form_data['last_name'],
+        'role' => $role,
+        'show_admin_bar_front' => false
+    );
+
+    $user_id = wp_insert_user($userdata);
+
+    if (is_wp_error($user_id)) {
+        wp_send_json_error(array('message' => $user_id->get_error_message()));
+    }
+
+    // Add company name for employers
+    if ($role === 'employer' && !empty($form_data['company_name'])) {
+        update_user_meta($user_id, 'company_name', sanitize_text_field($form_data['company_name']));
+    }
+
+    // Log the user in
+    wp_clear_auth_cookie();
+    wp_set_current_user($user_id);
+    wp_set_auth_cookie($user_id);
+
+    // Send welcome email
+    $to = $form_data['email'];
+    $subject = 'Welcome to ' . get_bloginfo('name');
+    $message = sprintf(
+        "Welcome to %s!\n\n" .
+        "Your account has been created successfully.\n\n" .
+        "Username: %s\n" .
+        "Role: %s\n\n" .
+        "You can log in at: %s\n\n" .
+        "Best regards,\n" .
+        "%s Team",
+        get_bloginfo('name'),
+        $form_data['username'],
+        ucfirst($role),
+        wp_login_url(),
+        get_bloginfo('name')
+    );
+    $headers = array('Content-Type: text/plain; charset=UTF-8');
+    wp_mail($to, $subject, $message, $headers);
+
+    // Return success response with redirect URL
+    $redirect_url = $role === 'employer' ? home_url('/employer-dashboard') : home_url('/employee-dashboard');
+    wp_send_json_success(array(
+        'message' => 'Registration successful!',
+        'redirect_url' => $redirect_url
+    ));
+}
+
+// Create custom user roles on theme activation
+function giggajob_create_user_roles() {
+    // Add the employee role if it doesn't exist
+    if (!get_role('employee')) {
+        add_role('employee', 'Employee', array(
+            'read' => true,
+            'edit_posts' => false,
+            'delete_posts' => false,
+            'upload_files' => true,
+            'edit_resume' => true,
+            'publish_resume' => true,
+            'edit_published_resume' => true,
+            'delete_published_resume' => true
+        ));
+    }
+
+    // Add the employer role if it doesn't exist
+    if (!get_role('employer')) {
+        add_role('employer', 'Employer', array(
+            'read' => true,
+            'edit_posts' => false,
+            'delete_posts' => false,
+            'upload_files' => true,
+            'edit_jobs' => true,
+            'publish_jobs' => true,
+            'edit_published_jobs' => true,
+            'delete_published_jobs' => true
+        ));
+    }
+}
+add_action('after_switch_theme', 'giggajob_create_user_roles');
