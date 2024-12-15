@@ -19,40 +19,62 @@ if (!empty($employer_profile)) {
     $company_name = get_post_meta($employer_profile[0]->ID, 'company_name', true);
 }
 
-// Get all job categories and industries
+// Get job categories
 $job_categories = get_terms(array(
     'taxonomy' => 'job_category',
     'hide_empty' => false,
 ));
 
+if (!is_wp_error($job_categories)) {
+    // Organize terms into hierarchy
+    function organize_terms_hierarchically($terms, $parent = 0) {
+        $hierarchy = array();
+        foreach ($terms as $term) {
+            if (is_object($term) && isset($term->parent) && $term->parent == $parent) {
+                $children = organize_terms_hierarchically($terms, $term->term_id);
+                if (!empty($children)) {
+                    $term->children = $children;
+                }
+                $hierarchy[] = $term;
+            }
+        }
+        return $hierarchy;
+    }
+
+    $hierarchical_categories = organize_terms_hierarchically($job_categories);
+} else {
+    $hierarchical_categories = array();
+}
+
+// Get industries
 $industries = get_terms(array(
     'taxonomy' => 'industry',
     'hide_empty' => false,
 ));
 
-// Organize terms into hierarchy
-function organize_terms_hierarchically($terms, $parent = 0) {
-    $hierarchy = array();
-    foreach ($terms as $term) {
-        if ($term->parent == $parent) {
-            $term->children = organize_terms_hierarchically($terms, $term->term_id);
-            $hierarchy[] = $term;
-        }
-    }
-    return $hierarchy;
+if (!is_wp_error($industries)) {
+    // Organize industries into hierarchy
+    $hierarchical_industries = organize_terms_hierarchically($industries);
+} else {
+    $hierarchical_industries = array();
 }
 
-$hierarchical_categories = organize_terms_hierarchically($job_categories);
-$hierarchical_industries = organize_terms_hierarchically($industries);
-
-// Function to output hierarchical options
-function output_hierarchical_options($terms, $level = 0) {
+// Function to output hierarchical select options
+function output_hierarchical_options($terms, $selected_terms = array(), $level = 0) {
+    $indent = str_repeat('&nbsp;&nbsp;&nbsp;', $level);
     foreach ($terms as $term) {
-        echo '<option value="' . esc_attr($term->term_id) . '">' . 
-             str_repeat('&mdash; ', $level) . esc_html($term->name) . 
-             '</option>';
-        if (!empty($term->children)) {
-            output_hierarchical_options($term->children, $level + 1);
+        if (is_object($term) && isset($term->term_id) && isset($term->name)) {
+            $selected = in_array($term->term_id, $selected_terms) ? 'selected' : '';
+            printf(
+                '<option value="%d" %s>%s%s</option>',
+                esc_attr($term->term_id),
+                $selected,
+                $indent,
+                esc_html($term->name)
+            );
+            if (!empty($term->children)) {
+                output_hierarchical_options($term->children, $selected_terms, $level + 1);
+            }
         }
     }
 }
@@ -142,17 +164,11 @@ if ($job_id) {
                     <label for="job_category" class="form-label">Job Category *</label>
                     <select class="form-select" id="job_category" name="job_category[]" multiple required>
                         <?php 
-                        foreach ($hierarchical_categories as $category) {
-                            $selected = $editing && in_array($category->term_id, $job_data['categories']) ? 'selected' : '';
-                            echo '<option value="' . esc_attr($category->term_id) . '" ' . $selected . '>' . 
-                                 esc_html($category->name) . '</option>';
-                            if (!empty($category->children)) {
-                                foreach ($category->children as $child) {
-                                    $selected = $editing && in_array($child->term_id, $job_data['categories']) ? 'selected' : '';
-                                    echo '<option value="' . esc_attr($child->term_id) . '" ' . $selected . '>' . 
-                                         str_repeat('&mdash; ', 1) . esc_html($child->name) . '</option>';
-                                }
-                            }
+                        if (!empty($hierarchical_categories)) {
+                            $selected_categories = $editing ? $job_data['categories'] : array();
+                            output_hierarchical_options($hierarchical_categories, $selected_categories);
+                        } else {
+                            echo '<option value="">No categories found</option>';
                         }
                         ?>
                     </select>
@@ -164,17 +180,11 @@ if ($job_id) {
                     <label for="industry" class="form-label">Industry *</label>
                     <select class="form-select" id="industry" name="industry[]" multiple required>
                         <?php 
-                        foreach ($hierarchical_industries as $industry) {
-                            $selected = $editing && in_array($industry->term_id, $job_data['industries']) ? 'selected' : '';
-                            echo '<option value="' . esc_attr($industry->term_id) . '" ' . $selected . '>' . 
-                                 esc_html($industry->name) . '</option>';
-                            if (!empty($industry->children)) {
-                                foreach ($industry->children as $child) {
-                                    $selected = $editing && in_array($child->term_id, $job_data['industries']) ? 'selected' : '';
-                                    echo '<option value="' . esc_attr($child->term_id) . '" ' . $selected . '>' . 
-                                         str_repeat('&mdash; ', 1) . esc_html($child->name) . '</option>';
-                                }
-                            }
+                        if (!empty($hierarchical_industries)) {
+                            $selected_industries = $editing ? $job_data['industries'] : array();
+                            output_hierarchical_options($hierarchical_industries, $selected_industries);
+                        } else {
+                            echo '<option value="">No industries found</option>';
                         }
                         ?>
                     </select>
@@ -211,22 +221,23 @@ if ($job_id) {
                     <div class="invalid-feedback">Please provide salary information.</div>
                 </div>
 
-                <!-- Remote Options -->
-                <div class="col-12">
-                    <label class="form-label d-block">Remote Work Options *</label>
-                    <div class="btn-group" role="group">
-                        <input type="radio" class="btn-check" name="remote_option" id="remote_no" value="no" 
-                               <?php echo $editing && $job_data['remote_option'] === 'no' ? 'checked' : ''; ?> required>
-                        <label class="btn btn-outline-secondary" for="remote_no">No Remote Work</label>
-
-                        <input type="radio" class="btn-check" name="remote_option" id="remote_hybrid" value="hybrid"
-                               <?php echo $editing && $job_data['remote_option'] === 'hybrid' ? 'checked' : ''; ?>>
-                        <label class="btn btn-outline-secondary" for="remote_hybrid">Hybrid</label>
-
-                        <input type="radio" class="btn-check" name="remote_option" id="remote_yes" value="yes"
-                               <?php echo $editing && $job_data['remote_option'] === 'yes' ? 'checked' : ''; ?>>
-                        <label class="btn btn-outline-secondary" for="remote_yes">Fully Remote</label>
-                    </div>
+                <!-- Remote Option -->
+                <div class="col-md-6">
+                    <label for="remote_option" class="form-label">Remote Work *</label>
+                    <select class="form-select" id="remote_option" name="remote_option" required>
+                        <option value="">Select Remote Option</option>
+                        <?php
+                        $remote_options = array(
+                            'no' => 'No remote work',
+                            'hybrid' => 'Hybrid remote',
+                            'full' => 'Fully remote'
+                        );
+                        foreach ($remote_options as $value => $label):
+                            $selected = $editing && $job_data['remote_option'] === $value ? 'selected' : '';
+                        ?>
+                            <option value="<?php echo esc_attr($value); ?>" <?php echo $selected; ?>><?php echo esc_html($label); ?></option>
+                        <?php endforeach; ?>
+                    </select>
                     <div class="invalid-feedback">Please select a remote work option.</div>
                 </div>
 
@@ -288,6 +299,8 @@ if ($job_id) {
                 }
 
                 var formData = new FormData(this);
+                formData.append('action', 'post_job');
+                formData.append('job_nonce', giggajob_ajax.nonce);
                 
                 $.ajax({
                     url: giggajob_ajax.ajax_url,
@@ -304,11 +317,12 @@ if ($job_id) {
                         if (response.success) {
                             window.location.href = response.data.redirect_url;
                         } else {
-                            alert(response.data.message);
+                            alert(response.data.message || 'An error occurred while posting the job.');
                         }
                     },
-                    error: function() {
-                        alert('An error occurred. Please try again.');
+                    error: function(xhr, status, error) {
+                        console.error('AJAX Error:', status, error);
+                        alert('An error occurred while posting the job. Please try again.');
                     },
                     complete: function() {
                         $('button[type="submit"]').prop('disabled', false).html(
@@ -317,6 +331,18 @@ if ($job_id) {
                     }
                 });
             });
+
+            // Initialize TinyMCE if it exists
+            if (typeof tinyMCE !== 'undefined') {
+                tinyMCE.init({
+                    selector: '#job_description',
+                    plugins: 'lists link',
+                    toolbar: 'bold italic | bullist numlist | link',
+                    menubar: false,
+                    branding: false,
+                    height: 300
+                });
+            }
         });
         </script>
     <?php endif; ?>

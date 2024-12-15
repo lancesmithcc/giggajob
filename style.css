@@ -1271,3 +1271,127 @@ body, html {
     margin: 0 auto !important;
     padding: 0 30px !important;
 }
+
+/* Dark mode styles for WordPress editor */
+.wp-editor-wrap {
+    background-color: #1a1a1a;
+    border: 1px solid #333;
+}
+
+.wp-editor-container {
+    border: 1px solid #333;
+}
+
+.wp-editor-area {
+    background-color: #1a1a1a !important;
+    color: #fff !important;
+}
+
+.mce-toolbar .mce-btn button {
+    color: #fff;
+}
+
+.mce-toolbar .mce-btn:hover {
+    background-color: #333;
+}
+
+.mce-toolbar .mce-active {
+    background-color: #333;
+}
+
+.mce-toolbar .mce-active button {
+    color: #fff;
+}
+
+/* Dark mode styles for Select2 */
+.select2-container--bootstrap-5 .select2-selection {
+    background-color: #1a1a1a !important;
+    border-color: #333 !important;
+    color: #fff !important;
+}
+
+.select2-container--bootstrap-5 .select2-selection--multiple .select2-selection__choice {
+    background-color: #333 !important;
+    border-color: #444 !important;
+    color: #fff !important;
+}
+
+.select2-container--bootstrap-5 .select2-dropdown {
+    background-color: #1a1a1a !important;
+    border-color: #333 !important;
+}
+
+.select2-container--bootstrap-5 .select2-results__option {
+    color: #fff !important;
+}
+
+.select2-container--bootstrap-5 .select2-results__option--highlighted {
+    background-color: #333 !important;
+}
+
+/* Dark mode styles for form elements */
+.form-control,
+.form-select {
+    background-color: #1a1a1a !important;
+    border-color: #333 !important;
+    color: #fff !important;
+}
+
+.form-control:focus,
+.form-select:focus {
+    background-color: #1a1a1a !important;
+    border-color: #0d6efd !important;
+    color: #fff !important;
+}
+
+.input-group-text {
+    background-color: #333 !important;
+    border-color: #333 !important;
+    color: #fff !important;
+}
+
+/* Dark mode styles for buttons */
+.btn-primary {
+    background-color: #0d6efd !important;
+    border-color: #0d6efd !important;
+}
+
+.btn-outline-secondary {
+    color: #fff !important;
+    border-color: #6c757d !important;
+}
+
+.btn-outline-secondary:hover {
+    background-color: #6c757d !important;
+    color: #fff !important;
+}
+
+/* Dark mode styles for validation */
+.was-validated .form-control:valid,
+.form-control.is-valid {
+    border-color: #198754 !important;
+    background-color: #1a1a1a !important;
+}
+
+.was-validated .form-control:invalid,
+.form-control.is-invalid {
+    border-color: #dc3545 !important;
+    background-color: #1a1a1a !important;
+}
+
+.invalid-feedback {
+    color: #dc3545 !important;
+}
+
+/* Dark mode styles for alerts */
+.alert-warning {
+    background-color: #332701 !important;
+    border-color: #664d03 !important;
+    color: #ffda6a !important;
+}
+
+/* Dark mode styles for spinners */
+.spinner-border {
+    border-color: #fff !important;
+    border-right-color: transparent !important;
+}

@@ -34,13 +34,21 @@ $active_tab = isset($_GET['tab']) ? sanitize_text_field($_GET['tab']) : 'dashboa
                                href="<?php echo add_query_arg('tab', 'dashboard'); ?>">
                                 <i class="bi bi-speedometer2 me-2"></i> Overview
                             </a>
+                            <a class="nav-link <?php echo $active_tab === 'search' ? 'active' : ''; ?>" 
+                               href="<?php echo add_query_arg('tab', 'search'); ?>">
+                                <i class="bi bi-search me-2"></i> Search Jobs
+                            </a>
                             <a class="nav-link <?php echo $active_tab === 'resume' ? 'active' : ''; ?>" 
                                href="<?php echo add_query_arg('tab', 'resume'); ?>">
                                 <i class="bi bi-file-person me-2"></i> Resume
                             </a>
                             <a class="nav-link <?php echo $active_tab === 'applications' ? 'active' : ''; ?>" 
                                href="<?php echo add_query_arg('tab', 'applications'); ?>">
-                                <i class="bi bi-briefcase me-2"></i> Applications
+                                <i class="bi bi-file-earmark-person me-2"></i>Applications
+                            </a>
+                            <a class="nav-link <?php echo $active_tab === 'settings' ? 'active' : ''; ?>" 
+                               href="<?php echo add_query_arg('tab', 'settings'); ?>">
+                                <i class="bi bi-gear me-2"></i>Settings
                             </a>
                         </div>
                     </div>
@@ -51,22 +59,27 @@ $active_tab = isset($_GET['tab']) ? sanitize_text_field($_GET['tab']) : 'dashboa
             <div class="col-md-9">
                 <div class="card">
                     <div class="card-body">
-                        <?php
-                        switch ($active_tab) {
-                            case 'dashboard':
-                                get_template_part('template-parts/dashboard/employee', 'overview');
-                                break;
-                            case 'resume':
-                                get_template_part('template-parts/dashboard/employee', 'resume');
-                                break;
-                            case 'applications':
-                                get_template_part('template-parts/dashboard/employee', 'applications');
-                                break;
-                            default:
-                                get_template_part('template-parts/dashboard/employee', 'overview');
-                                break;
-                        }
-                        ?>
+                        <div class="tab-content mt-4">
+                            <?php
+                            switch ($active_tab) {
+                                case 'search':
+                                    get_template_part('template-parts/dashboard/employee', 'search');
+                                    break;
+                                case 'resume':
+                                    get_template_part('template-parts/dashboard/employee', 'resume');
+                                    break;
+                                case 'applications':
+                                    get_template_part('template-parts/dashboard/employee', 'applications');
+                                    break;
+                                case 'settings':
+                                    get_template_part('template-parts/dashboard/employee', 'settings');
+                                    break;
+                                default:
+                                    get_template_part('template-parts/dashboard/employee', 'overview');
+                                    break;
+                            }
+                            ?>
+                        </div>
                     </div>
                 </div>
             </div>

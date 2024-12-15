@@ -28,6 +28,29 @@ function giggajob_register_taxonomies() {
         'rewrite' => array('slug' => 'industry'),
         'show_in_rest' => true, // Enable Gutenberg editor support
     ));
+
+    // Job Categories Taxonomy
+    register_taxonomy('job_category', array('jobs'), array(
+        'labels' => array(
+            'name' => __('Job Categories', 'giggajob'),
+            'singular_name' => __('Job Category', 'giggajob'),
+            'search_items' => __('Search Categories', 'giggajob'),
+            'all_items' => __('All Categories', 'giggajob'),
+            'parent_item' => __('Parent Category', 'giggajob'),
+            'parent_item_colon' => __('Parent Category:', 'giggajob'),
+            'edit_item' => __('Edit Category', 'giggajob'),
+            'update_item' => __('Update Category', 'giggajob'),
+            'add_new_item' => __('Add New Category', 'giggajob'),
+            'new_item_name' => __('New Category Name', 'giggajob'),
+            'menu_name' => __('Job Categories', 'giggajob'),
+        ),
+        'hierarchical' => true,
+        'show_ui' => true,
+        'show_admin_column' => true,
+        'query_var' => true,
+        'rewrite' => array('slug' => 'job-category'),
+        'show_in_rest' => true, // Enable Gutenberg editor support
+    ));
 }
 add_action('init', 'giggajob_register_taxonomies');
 
@@ -131,6 +154,12 @@ function giggajob_handle_job_submission() {
         wp_set_object_terms($job_id, $industries, 'industry');
     }
 
+    // Set job categories
+    if (!empty($_POST['job_category']) && is_array($_POST['job_category'])) {
+        $categories = array_map('intval', $_POST['job_category']);
+        wp_set_object_terms($job_id, $categories, 'job_category');
+    }
+
     // Set expiry date (30 days from now)
     $expiry_date = date('Y-m-d H:i:s', strtotime('+30 days'));
     update_post_meta($job_id, 'job_expiry_date', $expiry_date);
@@ -177,7 +206,25 @@ function giggajob_register_post_types() {
         'rewrite' => array('slug' => 'jobs'),
         'capability_type' => 'post',
         'map_meta_cap' => true,
-        'taxonomies' => array('industry') // Only include industry taxonomy
+        'taxonomies' => array('industry', 'job_category')
+    ));
+
+    // Job Applications Post Type
+    register_post_type('job_application', array(
+        'labels' => array(
+            'name' => __('Job Applications', 'giggajob'),
+            'singular_name' => __('Job Application', 'giggajob'),
+            'add_new' => __('Add New Application', 'giggajob'),
+            'add_new_item' => __('Add New Application', 'giggajob'),
+            'edit_item' => __('Edit Application', 'giggajob'),
+        ),
+        'public' => false,
+        'show_ui' => true,
+        'show_in_menu' => true,
+        'menu_icon' => 'dashicons-portfolio',
+        'supports' => array('title', 'custom-fields'),
+        'capability_type' => 'post',
+        'map_meta_cap' => true,
     ));
 
     // Resume Post Type
@@ -275,18 +322,57 @@ function giggajob_enqueue_scripts() {
     wp_enqueue_style('bootstrap-icons', 'https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css');
     wp_enqueue_style('select2', 'https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css');
     wp_enqueue_style('select2-bootstrap5', 'https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css');
-    
+
+    // Enqueue dashicons for the editor
+    wp_enqueue_style('dashicons');
+
+    // Enqueue scripts
     wp_enqueue_script('bootstrap', 'https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js', array('jquery'), null, true);
     wp_enqueue_script('select2', 'https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js', array('jquery'), null, true);
     wp_enqueue_script('giggajob-main', get_template_directory_uri() . '/assets/js/main.js', array('jquery', 'select2'), '1.0.0', true);
-    
-    // Add AJAX support
+
+    // Localize the script with new data
     wp_localize_script('giggajob-main', 'giggajob_ajax', array(
         'ajax_url' => admin_url('admin-ajax.php'),
-        'nonce' => wp_create_nonce('giggajob_nonce')
+        'nonce' => wp_create_nonce('giggajob_ajax_nonce')
     ));
+
+    // Add editor scripts and styles if we're on the post job page
+    if (is_page('employer-dashboard') && isset($_GET['tab']) && $_GET['tab'] === 'post-job') {
+        wp_enqueue_editor();
+        wp_enqueue_media();
+    }
 }
 add_action('wp_enqueue_scripts', 'giggajob_enqueue_scripts');
+
+// Enqueue admin styles
+function giggajob_admin_enqueue_scripts() {
+    wp_enqueue_style('dashicons');
+    wp_enqueue_style('wp-admin');
+}
+add_action('admin_enqueue_scripts', 'giggajob_admin_enqueue_scripts');
+
+// Fix admin bar styling
+function giggajob_admin_bar_style() {
+    if (is_admin_bar_showing()) {
+        ?>
+        <style>
+            #wpadminbar {
+                position: fixed !important;
+            }
+            html {
+                margin-top: 32px !important;
+            }
+            @media screen and (max-width: 782px) {
+                html {
+                    margin-top: 46px !important;
+                }
+            }
+        </style>
+        <?php
+    }
+}
+add_action('wp_head', 'giggajob_admin_bar_style');
 
 // Handle Job Actions (activate, pause, delete)
 function giggajob_handle_job_action() {
@@ -1239,3 +1325,200 @@ function giggajob_save_job_meta_box($post_id) {
     }
 }
 add_action('save_post_jobs', 'giggajob_save_job_meta_box');
+
+// Handle Application Actions (reject, cancel interview)
+add_action('wp_ajax_handle_application_action', 'giggajob_handle_application_action');
+function giggajob_handle_application_action() {
+    // Check nonce
+    if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'giggajob_nonce')) {
+        wp_send_json_error(array('message' => 'Security check failed.'));
+    }
+
+    // Check if user is logged in and is an employer
+    if (!is_user_logged_in() || !in_array('employer', wp_get_current_user()->roles)) {
+        wp_send_json_error(array('message' => 'Permission denied.'));
+    }
+
+    $application_id = isset($_POST['application_id']) ? intval($_POST['application_id']) : 0;
+    $action = isset($_POST['application_action']) ? sanitize_text_field($_POST['application_action']) : '';
+
+    if (!$application_id || !$action) {
+        wp_send_json_error(array('message' => 'Invalid request parameters.'));
+    }
+
+    // Get the application
+    $application = get_post($application_id);
+    if (!$application || $application->post_type !== 'job_application') {
+        wp_send_json_error(array('message' => 'Invalid application.'));
+    }
+
+    // Get the associated job
+    $job_id = get_post_meta($application_id, 'job_id', true);
+    $job = get_post($job_id);
+
+    // Verify ownership
+    if (!$job || $job->post_author != get_current_user_id()) {
+        wp_send_json_error(array('message' => 'Permission denied.'));
+    }
+
+    switch ($action) {
+        case 'reject':
+            update_post_meta($application_id, 'status', 'rejected');
+            wp_send_json_success(array('message' => 'Application rejected successfully.'));
+            break;
+
+        case 'cancel_interview':
+            update_post_meta($application_id, 'status', 'pending');
+            delete_post_meta($application_id, 'interview_date');
+            delete_post_meta($application_id, 'interview_time');
+            delete_post_meta($application_id, 'interview_location');
+            delete_post_meta($application_id, 'interview_message');
+            wp_send_json_success(array('message' => 'Interview cancelled successfully.'));
+            break;
+
+        default:
+            wp_send_json_error(array('message' => 'Invalid action.'));
+            break;
+    }
+}
+
+// Handle Interview Scheduling
+add_action('wp_ajax_handle_interview_schedule', 'giggajob_handle_interview_schedule');
+function giggajob_handle_interview_schedule() {
+    // Check nonce
+    if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'giggajob_nonce')) {
+        wp_send_json_error(array('message' => 'Security check failed.'));
+    }
+
+    // Check if user is logged in and is an employer
+    if (!is_user_logged_in() || !in_array('employer', wp_get_current_user()->roles)) {
+        wp_send_json_error(array('message' => 'Permission denied.'));
+    }
+
+    // Validate required fields
+    $required_fields = array(
+        'application_id' => 'Application ID',
+        'interview_date' => 'Interview Date',
+        'interview_time' => 'Interview Time',
+        'interview_location' => 'Interview Location'
+    );
+
+    foreach ($required_fields as $field => $label) {
+        if (empty($_POST[$field])) {
+            wp_send_json_error(array('message' => $label . ' is required.'));
+        }
+    }
+
+    $application_id = intval($_POST['application_id']);
+    
+    // Get the application
+    $application = get_post($application_id);
+    if (!$application || $application->post_type !== 'job_application') {
+        wp_send_json_error(array('message' => 'Invalid application.'));
+    }
+
+    // Get the associated job
+    $job_id = get_post_meta($application_id, 'job_id', true);
+    $job = get_post($job_id);
+
+    // Verify ownership
+    if (!$job || $job->post_author != get_current_user_id()) {
+        wp_send_json_error(array('message' => 'Permission denied.'));
+    }
+
+    // Update application status and interview details
+    update_post_meta($application_id, 'status', 'interview_scheduled');
+    update_post_meta($application_id, 'interview_date', sanitize_text_field($_POST['interview_date']));
+    update_post_meta($application_id, 'interview_time', sanitize_text_field($_POST['interview_time']));
+    update_post_meta($application_id, 'interview_location', sanitize_text_field($_POST['interview_location']));
+    
+    if (!empty($_POST['interview_message'])) {
+        update_post_meta($application_id, 'interview_message', sanitize_textarea_field($_POST['interview_message']));
+    }
+
+    wp_send_json_success(array('message' => 'Interview scheduled successfully.'));
+}
+
+// Handle Notification Preferences Update
+add_action('wp_ajax_update_notification_preferences', 'giggajob_update_notification_preferences');
+function giggajob_update_notification_preferences() {
+    // Check nonce
+    if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'update_notification_preferences')) {
+        wp_send_json_error(array('message' => 'Security check failed.'));
+    }
+
+    // Check if user is logged in
+    if (!is_user_logged_in()) {
+        wp_send_json_error(array('message' => 'Permission denied.'));
+    }
+
+    // Parse the form data
+    parse_str($_POST['preferences'], $preferences);
+    $notifications = isset($preferences['notifications']) ? $preferences['notifications'] : array();
+
+    // Sanitize each preference
+    $notifications = array_map('sanitize_text_field', $notifications);
+
+    // Save preferences
+    $result = update_user_meta(get_current_user_id(), 'notification_preferences', $notifications);
+
+    if ($result) {
+        wp_send_json_success(array('message' => 'Notification preferences updated successfully.'));
+    } else {
+        wp_send_json_error(array('message' => 'Failed to update notification preferences.'));
+    }
+}
+
+// Handle Password Change
+add_action('wp_ajax_change_user_password', 'giggajob_change_user_password');
+function giggajob_change_user_password() {
+    // Check nonce
+    if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'change_password')) {
+        wp_send_json_error(array('message' => 'Security check failed.'));
+    }
+
+    // Check if user is logged in
+    if (!is_user_logged_in()) {
+        wp_send_json_error(array('message' => 'Permission denied.'));
+    }
+
+    $current_user = wp_get_current_user();
+    $current_password = isset($_POST['current_password']) ? $_POST['current_password'] : '';
+    $new_password = isset($_POST['new_password']) ? $_POST['new_password'] : '';
+
+    // Verify current password
+    if (!wp_check_password($current_password, $current_user->user_pass, $current_user->ID)) {
+        wp_send_json_error(array('message' => 'Current password is incorrect.'));
+    }
+
+    // Validate new password
+    if (strlen($new_password) < 8) {
+        wp_send_json_error(array('message' => 'Password must be at least 8 characters long.'));
+    }
+
+    if (!preg_match('/[A-Z]/', $new_password)) {
+        wp_send_json_error(array('message' => 'Password must contain at least one uppercase letter.'));
+    }
+
+    if (!preg_match('/[a-z]/', $new_password)) {
+        wp_send_json_error(array('message' => 'Password must contain at least one lowercase letter.'));
+    }
+
+    if (!preg_match('/[0-9]/', $new_password)) {
+        wp_send_json_error(array('message' => 'Password must contain at least one number.'));
+    }
+
+    // Update password
+    wp_set_password($new_password, $current_user->ID);
+
+    // Log the user back in
+    $creds = array(
+        'user_login' => $current_user->user_login,
+        'user_password' => $new_password,
+        'remember' => true
+    );
+
+    wp_signon($creds, false);
+
+    wp_send_json_success(array('message' => 'Password updated successfully.'));
+}

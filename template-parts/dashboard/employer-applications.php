@@ -127,14 +127,62 @@ if (current_user_can('administrator')) {
                         $job_id = get_post_meta(get_the_ID(), 'job_id', true);
                         $job = get_post($job_id);
                         $applicant_id = get_post_meta(get_the_ID(), 'applicant_id', true);
-                        $applicant = get_userdata($applicant_id);
+                        $current_application = get_post(get_the_ID());
+                        
+                        // Debug information for administrators
+                        if (current_user_can('administrator')) {
+                            echo '<!-- Debug: Application ID: ' . get_the_ID() . 
+                                 ', Raw Applicant ID: ' . var_export($applicant_id, true) . 
+                                 ', Post Author: ' . $current_application->post_author . 
+                                 ', Post Type: ' . get_post_type(get_the_ID()) . ' -->';
+                        }
+                        
+                        // Try getting user by ID first
+                        $applicant = false;
+                        if ($applicant_id) {
+                            $applicant = get_user_by('ID', $applicant_id);
+                        }
+                        
+                        // If not found by ID, try getting by email
+                        if (!$applicant) {
+                            $applicant_email = get_post_meta(get_the_ID(), 'applicant_email', true);
+                            if ($applicant_email) {
+                                $applicant = get_user_by('email', $applicant_email);
+                                // Update applicant_id if found by email
+                                if ($applicant) {
+                                    update_post_meta(get_the_ID(), 'applicant_id', $applicant->ID);
+                                }
+                            }
+                        }
+                        
+                        // If still not found, try getting from post author
+                        if (!$applicant) {
+                            $applicant = get_user_by('ID', $current_application->post_author);
+                            // Update applicant_id if found from author
+                            if ($applicant) {
+                                update_post_meta(get_the_ID(), 'applicant_id', $applicant->ID);
+                            }
+                        }
+                        
+                        // Additional debug info
+                        if (current_user_can('administrator')) {
+                            echo '<!-- Debug: Applicant Found: ' . ($applicant ? 'Yes' : 'No') . 
+                                 ', Post Author: ' . $current_application->post_author . 
+                                 ', Email Meta: ' . get_post_meta(get_the_ID(), 'applicant_email', true) . ' -->';
+                        }
+                        
                         $status = get_post_meta(get_the_ID(), 'status', true);
                         $resume_id = get_post_meta(get_the_ID(), 'resume_id', true);
                     ?>
                         <tr>
                             <td>
-                                <strong><?php echo esc_html($applicant->display_name); ?></strong>
-                                <div class="small text-muted"><?php echo esc_html($applicant->user_email); ?></div>
+                                <?php if ($applicant && !is_wp_error($applicant)): ?>
+                                    <strong class="text-[#ccc]"><?php echo esc_html($applicant->display_name); ?></strong>
+                                    <div class="small text-muted"><?php echo esc_html($applicant->user_email); ?></div>
+                                <?php else: ?>
+                                    <strong class="text-[#ccc]">Applicant Information Unavailable</strong>
+                                    <div class="small text-muted">ID: <?php echo esc_html($applicant_id); ?></div>
+                                <?php endif; ?>
                             </td>
                             <td>
                                 <strong><?php echo get_the_title($job_id); ?></strong>
@@ -151,20 +199,19 @@ if (current_user_can('administrator')) {
                                     <?php echo ucfirst($status); ?>
                                 </span>
                             </td>
-                            <td><?php echo get_the_date(); ?></td>
+                            <td class="text-[#ccc]"><?php echo get_the_date(); ?></td>
                             <td>
                                 <div class="btn-group">
                                     <?php if ($resume_id): ?>
                                         <a href="<?php echo get_permalink($resume_id); ?>" 
-                                           class="btn btn-sm btn-outline-primary" 
+                                           class="btn btn-sm btn-outline-light" 
                                            title="View Resume">
                                             <i class="bi bi-file-person"></i>
                                         </a>
                                     <?php endif; ?>
                                     <?php if ($status === 'pending'): ?>
                                         <button type="button" 
-                                                class="btn btn-sm btn-outline-success application-action-btn" 
-                                                data-action="schedule_interview" 
+                                                class="btn btn-sm btn-outline-success toggle-interview-form" 
                                                 data-application-id="<?php echo get_the_ID(); ?>"
                                                 title="Schedule Interview">
                                             <i class="bi bi-calendar-check"></i>
@@ -181,14 +228,11 @@ if (current_user_can('administrator')) {
                                         $interview_date = get_post_meta(get_the_ID(), 'interview_date', true);
                                         $interview_time = get_post_meta(get_the_ID(), 'interview_time', true);
                                         $interview_location = get_post_meta(get_the_ID(), 'interview_location', true);
+                                        $interview_message = get_post_meta(get_the_ID(), 'interview_message', true);
                                         ?>
                                         <button type="button" 
-                                                class="btn btn-sm btn-outline-info application-action-btn" 
-                                                data-action="view_interview" 
+                                                class="btn btn-sm btn-outline-info toggle-interview-details" 
                                                 data-application-id="<?php echo get_the_ID(); ?>"
-                                                data-interview-date="<?php echo esc_attr($interview_date); ?>"
-                                                data-interview-time="<?php echo esc_attr($interview_time); ?>"
-                                                data-interview-location="<?php echo esc_attr($interview_location); ?>"
                                                 title="View Interview Details">
                                             <i class="bi bi-calendar-check"></i>
                                         </button>
@@ -203,6 +247,87 @@ if (current_user_can('administrator')) {
                                 </div>
                             </td>
                         </tr>
+                        <?php if ($status === 'interview_scheduled'): ?>
+                        <tr class="interview-details-row bg-dark d-none" id="interview-details-<?php echo get_the_ID(); ?>">
+                            <td colspan="6">
+                                <div class="p-3 border border-secondary rounded">
+                                    <div class="row">
+                                        <div class="col-md-4">
+                                            <div class="mb-2">
+                                                <i class="bi bi-calendar text-light me-2"></i>
+                                                <span class="text-light">Date:</span>
+                                                <span class="text-[#ccc]"><?php echo date('M j, Y', strtotime($interview_date)); ?></span>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="mb-2">
+                                                <i class="bi bi-clock text-light me-2"></i>
+                                                <span class="text-light">Time:</span>
+                                                <span class="text-[#ccc]"><?php echo date('g:i A', strtotime($interview_time)); ?></span>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="mb-2">
+                                                <i class="bi bi-geo-alt text-light me-2"></i>
+                                                <span class="text-light">Location:</span>
+                                                <span class="text-[#ccc]"><?php echo esc_html($interview_location); ?></span>
+                                            </div>
+                                        </div>
+                                        <?php if (!empty($interview_message)): ?>
+                                        <div class="col-12 mt-2">
+                                            <div class="mb-2">
+                                                <i class="bi bi-chat-text text-light me-2"></i>
+                                                <span class="text-light">Message:</span>
+                                                <div class="text-[#ccc] mt-1"><?php echo nl2br(esc_html($interview_message)); ?></div>
+                                            </div>
+                                        </div>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        <?php endif; ?>
+                        <?php if ($status === 'pending'): ?>
+                        <tr class="interview-form-row bg-dark d-none" id="interview-form-<?php echo get_the_ID(); ?>">
+                            <td colspan="6">
+                                <form class="interview-schedule-form p-3 border border-secondary rounded">
+                                    <input type="hidden" name="application_id" value="<?php echo get_the_ID(); ?>">
+                                    <div class="row g-3">
+                                        <div class="col-md-4">
+                                            <label class="form-label text-light">Interview Date</label>
+                                            <input type="date" class="form-control form-control-sm bg-dark text-light border-secondary" 
+                                                   name="interview_date" required min="<?php echo date('Y-m-d'); ?>">
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="form-label text-light">Interview Time</label>
+                                            <input type="time" class="form-control form-control-sm bg-dark text-light border-secondary" 
+                                                   name="interview_time" required>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="form-label text-light">Location</label>
+                                            <input type="text" class="form-control form-control-sm bg-dark text-light border-secondary" 
+                                                   name="interview_location" required 
+                                                   placeholder="Office address or video call link">
+                                        </div>
+                                        <div class="col-12">
+                                            <label class="form-label text-light">Message to Candidate</label>
+                                            <textarea class="form-control form-control-sm bg-dark text-light border-secondary" 
+                                                      name="interview_message" rows="2" 
+                                                      placeholder="Additional information or instructions"></textarea>
+                                        </div>
+                                        <div class="col-12">
+                                            <button type="submit" class="btn btn-sm btn-success me-2">
+                                                <i class="bi bi-check-lg me-1"></i>Schedule Interview
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-secondary cancel-interview-form">
+                                                <i class="bi bi-x-lg me-1"></i>Cancel
+                                            </button>
+                                        </div>
+                                    </div>
+                                </form>
+                            </td>
+                        </tr>
+                        <?php endif; ?>
                     <?php endwhile; ?>
                 </tbody>
             </table>
@@ -227,7 +352,7 @@ if (current_user_can('administrator')) {
         ?>
 
     <?php else: ?>
-        <div class="alert alert-info" role="alert">
+        <div class="alert alert-dark border-secondary" role="alert">
             <h4 class="alert-heading"><i class="bi bi-info-circle me-2"></i>No Applications Found</h4>
             <p class="mb-0">You haven't received any applications yet.</p>
         </div>
@@ -236,142 +361,27 @@ if (current_user_can('administrator')) {
     ?>
 </div>
 
-<!-- Interview Scheduling Modal -->
-<div class="modal fade" id="interviewModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Schedule Interview</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <form id="interviewForm">
-                    <input type="hidden" id="application_id" name="application_id">
-                    <div class="mb-3">
-                        <label for="interview_date" class="form-label">Interview Date *</label>
-                        <input type="date" class="form-control" id="interview_date" name="interview_date" required 
-                               min="<?php echo date('Y-m-d'); ?>">
-                    </div>
-                    <div class="mb-3">
-                        <label for="interview_time" class="form-label">Interview Time *</label>
-                        <input type="time" class="form-control" id="interview_time" name="interview_time" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="interview_location" class="form-label">Interview Location *</label>
-                        <input type="text" class="form-control" id="interview_location" name="interview_location" required>
-                        <div class="form-text">Enter physical location or video call link</div>
-                    </div>
-                    <div class="mb-3">
-                        <label for="interview_message" class="form-label">Message to Candidate</label>
-                        <textarea class="form-control" id="interview_message" name="interview_message" rows="3"></textarea>
-                        <div class="form-text">Additional information or instructions for the candidate</div>
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary" id="scheduleInterview">Schedule Interview</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- View Interview Modal -->
-<div class="modal fade" id="viewInterviewModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Interview Details</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <dl class="row">
-                    <dt class="col-sm-4">Date:</dt>
-                    <dd class="col-sm-8" id="view_interview_date"></dd>
-                    
-                    <dt class="col-sm-4">Time:</dt>
-                    <dd class="col-sm-8" id="view_interview_time"></dd>
-                    
-                    <dt class="col-sm-4">Location:</dt>
-                    <dd class="col-sm-8" id="view_interview_location"></dd>
-                    
-                    <dt class="col-sm-4">Message:</dt>
-                    <dd class="col-sm-8" id="view_interview_message"></dd>
-                </dl>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Confirmation Modal -->
-<div class="modal fade" id="confirmationModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Confirm Action</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <p>Are you sure you want to <span id="actionText"></span>?</p>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary" id="confirmAction">Confirm</button>
-            </div>
-        </div>
-    </div>
-</div>
-
 <script>
 jQuery(document).ready(function($) {
-    var interviewModal = new bootstrap.Modal(document.getElementById('interviewModal'));
-    var viewInterviewModal = new bootstrap.Modal(document.getElementById('viewInterviewModal'));
-    var confirmationModal = new bootstrap.Modal(document.getElementById('confirmationModal'));
-    var currentAction = null;
-    var currentApplicationId = null;
-
-    $('.application-action-btn').click(function() {
-        currentAction = $(this).data('action');
-        currentApplicationId = $(this).data('application-id');
-        
-        switch(currentAction) {
-            case 'schedule_interview':
-                $('#application_id').val(currentApplicationId);
-                interviewModal.show();
-                break;
-                
-            case 'view_interview':
-                var date = $(this).data('interview-date');
-                var time = $(this).data('interview-time');
-                var location = $(this).data('interview-location');
-                var message = $(this).data('interview-message');
-                
-                $('#view_interview_date').text(date);
-                $('#view_interview_time').text(time);
-                $('#view_interview_location').text(location);
-                $('#view_interview_message').text(message || 'No additional message');
-                
-                viewInterviewModal.show();
-                break;
-                
-            case 'reject':
-                $('#actionText').text('reject this application');
-                confirmationModal.show();
-                break;
-                
-            case 'cancel_interview':
-                $('#actionText').text('cancel this interview');
-                confirmationModal.show();
-                break;
-        }
+    // Toggle interview form
+    $('.toggle-interview-form').click(function() {
+        var applicationId = $(this).data('application-id');
+        $('#interview-form-' + applicationId).toggleClass('d-none');
     });
 
-    $('#scheduleInterview').click(function() {
-        var formData = new FormData($('#interviewForm')[0]);
-        formData.append('action', 'schedule_interview');
+    // Cancel interview form
+    $('.cancel-interview-form').click(function() {
+        $(this).closest('.interview-form-row').addClass('d-none');
+    });
+
+    // Handle interview scheduling
+    $('.interview-schedule-form').submit(function(e) {
+        e.preventDefault();
+        var $form = $(this);
+        var $submitBtn = $form.find('button[type="submit"]');
+        
+        var formData = new FormData(this);
+        formData.append('action', 'handle_interview_schedule');
         formData.append('nonce', giggajob_ajax.nonce);
         
         $.ajax({
@@ -381,7 +391,7 @@ jQuery(document).ready(function($) {
             processData: false,
             contentType: false,
             beforeSend: function() {
-                $(this).prop('disabled', true).html(
+                $submitBtn.prop('disabled', true).html(
                     '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Scheduling...'
                 );
             },
@@ -389,64 +399,93 @@ jQuery(document).ready(function($) {
                 if (response.success) {
                     location.reload();
                 } else {
-                    alert(response.data.message);
+                    alert(response.data.message || 'Failed to schedule interview. Please try again.');
                 }
             },
-            error: function() {
-                alert('An error occurred. Please try again.');
+            error: function(xhr, status, error) {
+                console.error('AJAX Error:', status, error);
+                alert('An error occurred while scheduling the interview. Please try again.');
             },
             complete: function() {
-                interviewModal.hide();
-                $(this).prop('disabled', false).text('Schedule Interview');
+                $submitBtn.prop('disabled', false).html(
+                    '<i class="bi bi-check-lg me-1"></i>Schedule Interview'
+                );
             }
         });
     });
 
-    $('#confirmAction').click(function() {
+    // Handle other actions (reject, cancel interview)
+    $('.application-action-btn').click(function() {
+        var action = $(this).data('action');
+        var applicationId = $(this).data('application-id');
+        
+        if (!confirm('Are you sure you want to ' + (action === 'reject' ? 'reject this application?' : 'cancel this interview?'))) {
+            return;
+        }
+        
+        var $btn = $(this);
+        var $row = $btn.closest('tr');
+        
         $.ajax({
             url: giggajob_ajax.ajax_url,
             type: 'POST',
             data: {
-                action: 'application_action',
-                application_action: currentAction,
-                application_id: currentApplicationId,
+                action: 'handle_application_action',
+                application_action: action,
+                application_id: applicationId,
                 nonce: giggajob_ajax.nonce
             },
             beforeSend: function() {
-                $(this).prop('disabled', true).html(
-                    '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Processing...'
+                $btn.prop('disabled', true).html(
+                    '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>'
                 );
             },
             success: function(response) {
                 if (response.success) {
-                    location.reload();
+                    // Fade out and remove the row
+                    $row.fadeOut(400, function() {
+                        $(this).remove();
+                        // If no more rows, show the "No Applications" message
+                        if ($('tbody tr:visible').length === 0) {
+                            location.reload();
+                        }
+                    });
                 } else {
-                    alert(response.data.message);
+                    alert(response.data.message || 'Failed to process the request. Please try again.');
                 }
             },
-            error: function() {
-                alert('An error occurred. Please try again.');
+            error: function(xhr, status, error) {
+                console.error('AJAX Error:', status, error);
+                alert('An error occurred while processing your request. Please try again.');
             },
             complete: function() {
-                confirmationModal.hide();
-                $(this).prop('disabled', false).text('Confirm');
+                $btn.prop('disabled', false).html(
+                    '<i class="bi bi-' + (action === 'reject' ? 'x-lg' : 'calendar-x') + '"></i>'
+                );
             }
         });
     });
 
     // Set minimum time based on selected date
-    $('#interview_date').change(function() {
+    $('input[name="interview_date"]').change(function() {
         var selectedDate = $(this).val();
         var today = new Date().toISOString().split('T')[0];
+        var timeInput = $(this).closest('form').find('input[name="interview_time"]');
         
         if (selectedDate === today) {
             var now = new Date();
             var hours = String(now.getHours()).padStart(2, '0');
             var minutes = String(now.getMinutes()).padStart(2, '0');
-            $('#interview_time').attr('min', hours + ':' + minutes);
+            timeInput.attr('min', hours + ':' + minutes);
         } else {
-            $('#interview_time').removeAttr('min');
+            timeInput.removeAttr('min');
         }
+    });
+
+    // Toggle interview details
+    $('.toggle-interview-details').click(function() {
+        var applicationId = $(this).data('application-id');
+        $('#interview-details-' + applicationId).toggleClass('d-none');
     });
 });
 </script> 
