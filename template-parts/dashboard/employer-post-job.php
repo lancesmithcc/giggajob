@@ -19,33 +19,6 @@ if (!empty($employer_profile)) {
     $company_name = get_post_meta($employer_profile[0]->ID, 'company_name', true);
 }
 
-// Get job categories
-$job_categories = get_terms(array(
-    'taxonomy' => 'job_category',
-    'hide_empty' => false,
-));
-
-if (!is_wp_error($job_categories)) {
-    // Organize terms into hierarchy
-    function organize_terms_hierarchically($terms, $parent = 0) {
-        $hierarchy = array();
-        foreach ($terms as $term) {
-            if (is_object($term) && isset($term->parent) && $term->parent == $parent) {
-                $children = organize_terms_hierarchically($terms, $term->term_id);
-                if (!empty($children)) {
-                    $term->children = $children;
-                }
-                $hierarchy[] = $term;
-            }
-        }
-        return $hierarchy;
-    }
-
-    $hierarchical_categories = organize_terms_hierarchically($job_categories);
-} else {
-    $hierarchical_categories = array();
-}
-
 // Get industries
 $industries = get_terms(array(
     'taxonomy' => 'industry',
@@ -96,7 +69,6 @@ if ($job_id) {
             'job_location' => get_post_meta($job_id, 'job_location', true),
             'remote_option' => get_post_meta($job_id, 'remote_option', true),
             'salary' => get_post_meta($job_id, 'salary', true),
-            'categories' => wp_get_post_terms($job_id, 'job_category', array('fields' => 'ids')),
             'industries' => wp_get_post_terms($job_id, 'industry', array('fields' => 'ids'))
         );
     }
@@ -157,22 +129,6 @@ if ($job_id) {
                         <?php endforeach; ?>
                     </select>
                     <div class="invalid-feedback">Please select a job type.</div>
-                </div>
-
-                <!-- Job Category -->
-                <div class="col-md-6">
-                    <label for="job_category" class="form-label">Job Category *</label>
-                    <select class="form-select" id="job_category" name="job_category[]" multiple required>
-                        <?php 
-                        if (!empty($hierarchical_categories)) {
-                            $selected_categories = $editing ? $job_data['categories'] : array();
-                            output_hierarchical_options($hierarchical_categories, $selected_categories);
-                        } else {
-                            echo '<option value="">No categories found</option>';
-                        }
-                        ?>
-                    </select>
-                    <div class="invalid-feedback">Please select at least one job category.</div>
                 </div>
 
                 <!-- Industry -->
@@ -291,7 +247,7 @@ if ($job_id) {
         <script>
         jQuery(document).ready(function($) {
             // Initialize Select2 for multiple select fields
-            $('#job_category, #industry').select2({
+            $('#industry').select2({
                 theme: 'bootstrap-5',
                 width: '100%',
                 placeholder: 'Select options'

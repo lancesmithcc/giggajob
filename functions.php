@@ -28,31 +28,20 @@ function giggajob_register_taxonomies() {
         'rewrite' => array('slug' => 'industry'),
         'show_in_rest' => true, // Enable Gutenberg editor support
     ));
-
-    // Job Categories Taxonomy
-    register_taxonomy('job_category', array('jobs'), array(
-        'labels' => array(
-            'name' => __('Job Categories', 'giggajob'),
-            'singular_name' => __('Job Category', 'giggajob'),
-            'search_items' => __('Search Categories', 'giggajob'),
-            'all_items' => __('All Categories', 'giggajob'),
-            'parent_item' => __('Parent Category', 'giggajob'),
-            'parent_item_colon' => __('Parent Category:', 'giggajob'),
-            'edit_item' => __('Edit Category', 'giggajob'),
-            'update_item' => __('Update Category', 'giggajob'),
-            'add_new_item' => __('Add New Category', 'giggajob'),
-            'new_item_name' => __('New Category Name', 'giggajob'),
-            'menu_name' => __('Job Categories', 'giggajob'),
-        ),
-        'hierarchical' => true,
-        'show_ui' => true,
-        'show_admin_column' => true,
-        'query_var' => true,
-        'rewrite' => array('slug' => 'job-category'),
-        'show_in_rest' => true, // Enable Gutenberg editor support
-    ));
 }
 add_action('init', 'giggajob_register_taxonomies');
+
+// Function to organize taxonomy terms hierarchically
+function organize_terms_hierarchically($terms, $parent_id = 0) {
+    $children = array();
+    foreach ($terms as $term) {
+        if ($term->parent == $parent_id) {
+            $term->children = organize_terms_hierarchically($terms, $term->term_id);
+            $children[] = $term;
+        }
+    }
+    return $children;
+}
 
 // Handle Job Submission
 function giggajob_handle_job_submission() {
@@ -188,11 +177,6 @@ function giggajob_handle_job_submission() {
             wp_set_object_terms($job_id, $industries, 'industry');
         }
 
-        if (!empty($_POST['job_category']) && is_array($_POST['job_category'])) {
-            $categories = array_map('intval', $_POST['job_category']);
-            wp_set_object_terms($job_id, $categories, 'job_category');
-        }
-
         // Set expiry date (30 days from now)
         $expiry_date = date('Y-m-d H:i:s', strtotime('+30 days'));
         update_post_meta($job_id, 'job_expiry_date', $expiry_date);
@@ -267,7 +251,7 @@ function giggajob_register_post_types() {
         'rewrite' => array('slug' => 'jobs'),
         'capability_type' => 'post',
         'map_meta_cap' => true,
-        'taxonomies' => array('industry', 'job_category')
+        'taxonomies' => array('industry')
     ));
 
     // Job Applications Post Type

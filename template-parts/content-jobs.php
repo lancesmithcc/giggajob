@@ -15,6 +15,9 @@ $salary_min = get_post_meta(get_the_ID(), 'salary_min', true);
 $salary_max = get_post_meta(get_the_ID(), 'salary_max', true);
 $salary_period = get_post_meta(get_the_ID(), 'salary_period', true);
 
+// Set excerpt length
+$excerpt_length = apply_filters('giggajob_job_excerpt_length', 15);
+
 // Job types array
 $job_types = array(
     'full-time' => 'Full Time',
@@ -24,7 +27,11 @@ $job_types = array(
     'internship' => 'Internship'
 );
 
-if (!is_singular()): // If we're not on a single job page, show the card view ?>
+// Check if we're in a dashboard or archive view
+$is_dashboard = strpos($_SERVER['REQUEST_URI'], 'dashboard') !== false;
+$should_show_excerpt = !is_singular('jobs') || $is_dashboard;
+
+if ($should_show_excerpt): // If we're not on a single job page or we're in dashboard, show the card view ?>
     <div class="card job-card h-100">
         <div class="card-body">
             <h3 class="h5 card-title mb-3">
@@ -82,7 +89,10 @@ if (!is_singular()): // If we're not on a single job page, show the card view ?>
             </div>
 
             <div class="job-excerpt mt-3">
-                <?php echo wp_trim_words(get_the_content(), 20); ?>
+                <?php 
+                $excerpt = wp_trim_words(get_the_content(), $excerpt_length, '...');
+                echo '<p class="mb-0">' . $excerpt . '</p>';
+                ?>
             </div>
         </div>
         <div class="card-footer border-top-0">
