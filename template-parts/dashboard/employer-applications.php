@@ -112,6 +112,10 @@ if (current_user_can('administrator')) {
 
     <?php if ($applications_query->have_posts()) : ?>
         <div class="table-responsive">
+            <?php 
+            // Create nonce for application actions
+            $nonce = wp_create_nonce('application_action_nonce');
+            ?>
             <table class="table table-hover">
                 <thead>
                     <tr>
@@ -380,6 +384,9 @@ if (current_user_can('administrator')) {
 
 <script>
 jQuery(document).ready(function($) {
+    // Add nonce to the page for AJAX requests
+    var applicationNonce = '<?php echo $nonce; ?>';
+    
     // Toggle interview form
     $('.toggle-interview-form').click(function() {
         var applicationId = $(this).data('application-id');
@@ -461,7 +468,7 @@ jQuery(document).ready(function($) {
                 action: 'handle_application_action',
                 application_action: action,
                 application_id: applicationId,
-                nonce: giggajob_ajax.nonce
+                nonce: applicationNonce
             },
             beforeSend: function() {
                 $btn.prop('disabled', true).html(

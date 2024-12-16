@@ -55,6 +55,7 @@ $remote_options = array(
                                     <input type="text" class="form-control border-start-0" 
                                            name="s" value="<?php echo esc_attr($search_query); ?>" 
                                            placeholder="Job title, keywords, or company">
+                                    <input type="hidden" name="post_type" value="jobs">
                                 </div>
                             </div>
 
@@ -115,13 +116,13 @@ $remote_options = array(
         <div class="container">
             <?php
             // Build query arguments
-            $paged = (get_query_var('paged')) ? get_query_var('paged') : 1;
+            $paged = get_query_var('page') ? get_query_var('page') : (get_query_var('paged') ? get_query_var('paged') : 1);
             $args = array(
                 'post_type' => 'jobs',
-                'posts_per_page' => 10,
+                'posts_per_page' => 12,
                 'paged' => $paged,
+                'post_status' => 'publish',
                 'meta_query' => array(
-                    'relation' => 'AND',
                     array(
                         'key' => 'job_status',
                         'value' => 'active',
@@ -162,7 +163,43 @@ $remote_options = array(
                 );
             }
 
+            // Handle sorting
+            $orderby = isset($_GET['orderby']) ? sanitize_text_field($_GET['orderby']) : 'date';
+            switch ($orderby) {
+                case 'title':
+                    $args['orderby'] = 'title';
+                    $args['order'] = 'ASC';
+                    break;
+                case 'company':
+                    $args['orderby'] = 'meta_value';
+                    $args['meta_key'] = 'company_name';
+                    $args['order'] = 'ASC';
+                    break;
+                default: // date
+                    $args['orderby'] = 'date';
+                    $args['order'] = 'DESC';
+                    break;
+            }
+
+            // Debug query
+            if (current_user_can('administrator') && isset($_GET['debug'])) {
+                echo '<pre class="bg-dark text-light p-3 mb-4">';
+                echo 'Query Args: ' . print_r($args, true);
+                echo '</pre>';
+            }
+
             $jobs_query = new WP_Query($args);
+
+            // Debug results
+            if (current_user_can('administrator') && isset($_GET['debug'])) {
+                echo '<pre class="bg-dark text-light p-3 mb-4">';
+                echo 'Found Posts: ' . $jobs_query->found_posts . "\n";
+                echo 'Post Count: ' . $jobs_query->post_count . "\n";
+                echo 'Max Num Pages: ' . $jobs_query->max_num_pages . "\n";
+                echo 'Current Page: ' . $paged . "\n";
+                echo 'Request: ' . $jobs_query->request . "\n";
+                echo '</pre>';
+            }
             ?>
 
             <!-- Results Count and Sort -->
@@ -175,10 +212,16 @@ $remote_options = array(
                     <?php endif; ?>
                 </div>
                 <div class="sort-options">
-                    <select class="form-select" id="sort-jobs">
-                        <option value="date">Most Recent</option>
-                        <option value="title">Job Title</option>
-                        <option value="company">Company</option>
+                    <?php 
+                    $current_url = remove_query_arg('paged'); // Remove paged parameter when sorting
+                    ?>
+                    <select class="form-select" id="sort-jobs" onchange="window.location.href=this.value">
+                        <option value="<?php echo esc_url(add_query_arg('orderby', 'date', $current_url)); ?>" 
+                                <?php selected($orderby, 'date'); ?>>Most Recent</option>
+                        <option value="<?php echo esc_url(add_query_arg('orderby', 'title', $current_url)); ?>" 
+                                <?php selected($orderby, 'title'); ?>>Job Title</option>
+                        <option value="<?php echo esc_url(add_query_arg('orderby', 'company', $current_url)); ?>" 
+                                <?php selected($orderby, 'company'); ?>>Company</option>
                     </select>
                 </div>
             </div>
@@ -186,7 +229,9 @@ $remote_options = array(
             <!-- Job Cards -->
             <?php if ($jobs_query->have_posts()): ?>
                 <div class="row g-4">
-                    <?php while ($jobs_query->have_posts()): $jobs_query->the_post(); 
+                    <?php 
+                    while ($jobs_query->have_posts()): $jobs_query->the_post(); 
+                        // Get job meta data
                         $company_name = get_post_meta(get_the_ID(), 'company_name', true);
                         $job_type = get_post_meta(get_the_ID(), 'job_type', true);
                         $job_location = get_post_meta(get_the_ID(), 'job_location', true);
@@ -196,7 +241,7 @@ $remote_options = array(
                         $salary_max = get_post_meta(get_the_ID(), 'salary_max', true);
                         $salary_period = get_post_meta(get_the_ID(), 'salary_period', true);
                     ?>
-                        <div class="col-md-6">
+                        <div class="col-12 col-md-6 col-lg-4">
                             <div class="card job-card h-100">
                                 <div class="card-body">
                                     <h3 class="h5 card-title mb-3">
@@ -212,12 +257,16 @@ $remote_options = array(
                                     </div>
 
                                     <div class="job-meta mb-3">
-                                        <span class="badge bg-primary me-2"><?php echo esc_html($job_types[$job_type]); ?></span>
+                                        <?php if ($job_type && isset($job_types[$job_type])): ?>
+                                            <span class="badge bg-primary me-2"><?php echo esc_html($job_types[$job_type]); ?></span>
+                                        <?php endif; ?>
+                                        
                                         <?php if ($remote_option === 'yes'): ?>
                                             <span class="badge bg-success me-2">Remote</span>
                                         <?php elseif ($remote_option === 'hybrid'): ?>
                                             <span class="badge bg-info me-2">Hybrid</span>
                                         <?php endif; ?>
+                                        
                                         <?php
                                         $job_industries = get_the_terms(get_the_ID(), 'industry');
                                         if ($job_industries && !is_wp_error($job_industries)) {
@@ -240,9 +289,13 @@ $remote_options = array(
                                                 <i class="bi bi-currency-dollar me-2"></i>
                                                 <?php
                                                 if ($salary_type === 'fixed') {
-                                                    echo esc_html(number_format($salary_min) . ' per ' . $salary_period);
+                                                    echo !empty($salary_min) ? esc_html(number_format((float)$salary_min) . ' per ' . $salary_period) : 'Salary not specified';
                                                 } else {
-                                                    echo esc_html(number_format($salary_min) . ' - ' . number_format($salary_max) . ' per ' . $salary_period);
+                                                    if (!empty($salary_min) && !empty($salary_max)) {
+                                                        echo esc_html(number_format((float)$salary_min) . ' - ' . number_format((float)$salary_max) . ' per ' . $salary_period);
+                                                    } else {
+                                                        echo 'Salary range not specified';
+                                                    }
                                                 }
                                                 ?>
                                             </p>
@@ -270,16 +323,31 @@ $remote_options = array(
                 <?php if ($jobs_query->max_num_pages > 1): ?>
                     <div class="pagination-wrapper mt-5">
                         <?php
+                        global $wp;
+                        $current_url = home_url(add_query_arg(array(), $wp->request));
+                        
+                        // Remove page/paged parameter if it exists
+                        $base_url = remove_query_arg(array('page', 'paged'), $current_url);
+                        
+                        // Add other query parameters if they exist
+                        if (!empty($_GET)) {
+                            foreach ($_GET as $key => $value) {
+                                if ($key !== 'page' && $key !== 'paged') {
+                                    $base_url = add_query_arg($key, $value, $base_url);
+                                }
+                            }
+                        }
+                        
                         echo paginate_links(array(
-                            'base' => str_replace(999999999, '%#%', esc_url(get_pagenum_link(999999999))),
-                            'format' => '?paged=%#%',
-                            'current' => max(1, get_query_var('paged')),
+                            'base' => $base_url . '%_%',
+                            'format' => '?page=%#%',
+                            'current' => $paged,
                             'total' => $jobs_query->max_num_pages,
                             'prev_text' => '<i class="bi bi-chevron-left"></i> Previous',
                             'next_text' => 'Next <i class="bi bi-chevron-right"></i>',
                             'type' => 'list',
-                            'end_size' => 3,
-                            'mid_size' => 3
+                            'end_size' => 2,
+                            'mid_size' => 2
                         ));
                         ?>
                     </div>

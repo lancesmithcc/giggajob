@@ -56,15 +56,33 @@ add_action('init', 'giggajob_register_taxonomies');
 
 // Handle Job Submission
 function giggajob_handle_job_submission() {
+    // Start debugging
+    error_log('Job submission started');
+    
     // Check nonce
-    if (!isset($_POST['job_nonce']) || !wp_verify_nonce($_POST['job_nonce'], 'post_job_nonce')) {
-        wp_send_json_error(array('message' => 'Security check failed.'));
+    if (!isset($_POST['job_nonce'])) {
+        error_log('Job submission failed: No nonce provided');
+        wp_send_json_error(array('message' => 'Security check failed - no nonce'));
+    }
+    
+    if (!wp_verify_nonce($_POST['job_nonce'], 'post_job_nonce')) {
+        error_log('Job submission failed: Nonce verification failed');
+        wp_send_json_error(array('message' => 'Security check failed - invalid nonce'));
     }
 
     // Check if user is logged in and is an employer
-    if (!is_user_logged_in() || !in_array('employer', wp_get_current_user()->roles)) {
-        wp_send_json_error(array('message' => 'Permission denied.'));
+    if (!is_user_logged_in()) {
+        error_log('Job submission failed: User not logged in');
+        wp_send_json_error(array('message' => 'User not logged in'));
     }
+    
+    if (!in_array('employer', wp_get_current_user()->roles)) {
+        error_log('Job submission failed: User not an employer');
+        wp_send_json_error(array('message' => 'User not an employer'));
+    }
+
+    // Log received data
+    error_log('POST data received: ' . print_r($_POST, true));
 
     // Validate required fields
     $required_fields = array(
@@ -79,98 +97,141 @@ function giggajob_handle_job_submission() {
 
     foreach ($required_fields as $field => $label) {
         if (empty($_POST[$field])) {
+            error_log("Job submission failed: Missing required field - {$label}");
             wp_send_json_error(array('message' => $label . ' is required.'));
         }
     }
 
-    // Check if editing or creating new job
-    $job_id = isset($_POST['job_id']) ? intval($_POST['job_id']) : 0;
-    $editing = false;
+    try {
+        // Check if editing or creating new job
+        $job_id = isset($_POST['job_id']) ? intval($_POST['job_id']) : 0;
+        $editing = false;
 
-    if ($job_id) {
-        $job = get_post($job_id);
-        if (!$job || $job->post_author != get_current_user_id()) {
-            wp_send_json_error(array('message' => 'Invalid job or permission denied.'));
+        if ($job_id) {
+            $job = get_post($job_id);
+            if (!$job || $job->post_author != get_current_user_id()) {
+                error_log('Job submission failed: Invalid job or permission denied');
+                wp_send_json_error(array('message' => 'Invalid job or permission denied.'));
+            }
+            $editing = true;
         }
-        $editing = true;
-    }
 
-    // Prepare job data
-    $job_data = array(
-        'post_title' => sanitize_text_field($_POST['job_title']),
-        'post_content' => wp_kses_post($_POST['job_description']),
-        'post_status' => 'publish',
-        'post_type' => 'jobs',
-        'post_author' => get_current_user_id()
-    );
+        // Prepare job data
+        $job_data = array(
+            'post_title' => sanitize_text_field($_POST['job_title']),
+            'post_content' => wp_kses_post($_POST['job_description']),
+            'post_status' => 'publish',
+            'post_type' => 'jobs',
+            'post_author' => get_current_user_id()
+        );
 
-    if ($editing) {
-        $job_data['ID'] = $job_id;
-        $job_id = wp_update_post($job_data);
-    } else {
-        $job_id = wp_insert_post($job_data);
-    }
-
-    if (is_wp_error($job_id)) {
-        wp_send_json_error(array('message' => 'Failed to ' . ($editing ? 'update' : 'create') . ' job post.'));
-    }
-
-    // Save job meta data
-    $meta_fields = array(
-        'company_name' => sanitize_text_field($_POST['company_name']),
-        'job_type' => sanitize_text_field($_POST['job_type']),
-        'job_location' => sanitize_text_field($_POST['job_location']),
-        'remote_option' => sanitize_text_field($_POST['remote_option']),
-        'job_status' => 'active'
-    );
-
-    // Handle salary information
-    if ($_POST['salary_type'] === 'exempt') {
-        $meta_fields['salary'] = 'legal exemption for non-disclosure';
-    } else {
-        $salary_min = isset($_POST['salary_min']) ? intval($_POST['salary_min']) : 0;
-        $salary_max = isset($_POST['salary_max']) ? intval($_POST['salary_max']) : 0;
-        $salary_period = isset($_POST['salary_period']) ? sanitize_text_field($_POST['salary_period']) : 'year';
-
-        if ($_POST['salary_type'] === 'fixed') {
-            $meta_fields['salary'] = $salary_min . ' per ' . $salary_period;
+        if ($editing) {
+            $job_data['ID'] = $job_id;
+            error_log('Updating existing job: ' . $job_id);
+            $job_id = wp_update_post($job_data);
         } else {
-            $meta_fields['salary'] = $salary_min . ' - ' . $salary_max . ' per ' . $salary_period;
+            error_log('Creating new job');
+            $job_id = wp_insert_post($job_data);
         }
 
-        // Store individual salary components for filtering
-        $meta_fields['salary_min'] = $salary_min;
-        $meta_fields['salary_max'] = $salary_max;
-        $meta_fields['salary_period'] = $salary_period;
+        if (is_wp_error($job_id)) {
+            error_log('Job submission failed: wp_insert_post/wp_update_post error - ' . $job_id->get_error_message());
+            wp_send_json_error(array('message' => 'Failed to ' . ($editing ? 'update' : 'create') . ' job post.'));
+        }
+
+        error_log('Job post created/updated successfully. Job ID: ' . $job_id);
+
+        // Handle featured image
+        if (!empty($_POST['job_featured_image_id'])) {
+            set_post_thumbnail($job_id, intval($_POST['job_featured_image_id']));
+        } else {
+            delete_post_thumbnail($job_id);
+        }
+
+        // Save job meta data
+        $meta_fields = array(
+            'company_name' => sanitize_text_field($_POST['company_name']),
+            'job_type' => sanitize_text_field($_POST['job_type']),
+            'job_location' => sanitize_text_field($_POST['job_location']),
+            'remote_option' => sanitize_text_field($_POST['remote_option']),
+            'job_status' => 'active'
+        );
+
+        // Handle salary information
+        if ($_POST['salary_type'] === 'exempt') {
+            $meta_fields['salary'] = 'legal exemption for non-disclosure';
+        } else {
+            $salary_min = isset($_POST['salary_min']) ? intval($_POST['salary_min']) : 0;
+            $salary_max = isset($_POST['salary_max']) ? intval($_POST['salary_max']) : 0;
+            $salary_period = isset($_POST['salary_period']) ? sanitize_text_field($_POST['salary_period']) : 'year';
+
+            if ($_POST['salary_type'] === 'fixed') {
+                $meta_fields['salary'] = $salary_min . ' per ' . $salary_period;
+            } else {
+                $meta_fields['salary'] = $salary_min . ' - ' . $salary_max . ' per ' . $salary_period;
+            }
+
+            // Store individual salary components for filtering
+            $meta_fields['salary_min'] = $salary_min;
+            $meta_fields['salary_max'] = $salary_max;
+            $meta_fields['salary_period'] = $salary_period;
+        }
+
+        // Save all meta fields
+        foreach ($meta_fields as $key => $value) {
+            update_post_meta($job_id, $key, $value);
+        }
+
+        // Set taxonomies
+        if (!empty($_POST['industry']) && is_array($_POST['industry'])) {
+            $industries = array_map('intval', $_POST['industry']);
+            wp_set_object_terms($job_id, $industries, 'industry');
+        }
+
+        if (!empty($_POST['job_category']) && is_array($_POST['job_category'])) {
+            $categories = array_map('intval', $_POST['job_category']);
+            wp_set_object_terms($job_id, $categories, 'job_category');
+        }
+
+        // Set expiry date (30 days from now)
+        $expiry_date = date('Y-m-d H:i:s', strtotime('+30 days'));
+        update_post_meta($job_id, 'job_expiry_date', $expiry_date);
+
+        error_log('All meta data saved successfully');
+
+        // Make sure we haven't output anything before this point
+        if (!headers_sent()) {
+            wp_send_json_success(array(
+                'message' => 'Job ' . ($editing ? 'updated' : 'posted') . ' successfully!',
+                'redirect_url' => home_url('/employer-dashboard/?tab=manage-jobs')
+            ));
+        } else {
+            error_log('Headers already sent before JSON response');
+            die(json_encode(array(
+                'success' => true,
+                'data' => array(
+                    'message' => 'Job ' . ($editing ? 'updated' : 'posted') . ' successfully!',
+                    'redirect_url' => home_url('/employer-dashboard/?tab=manage-jobs')
+                )
+            )));
+        }
+
+    } catch (Exception $e) {
+        error_log('Job submission failed with exception: ' . $e->getMessage());
+        wp_send_json_error(array('message' => 'An unexpected error occurred.'));
     }
-
-    foreach ($meta_fields as $key => $value) {
-        update_post_meta($job_id, $key, $value);
-    }
-
-    // Set industries
-    if (!empty($_POST['industry']) && is_array($_POST['industry'])) {
-        $industries = array_map('intval', $_POST['industry']);
-        wp_set_object_terms($job_id, $industries, 'industry');
-    }
-
-    // Set job categories
-    if (!empty($_POST['job_category']) && is_array($_POST['job_category'])) {
-        $categories = array_map('intval', $_POST['job_category']);
-        wp_set_object_terms($job_id, $categories, 'job_category');
-    }
-
-    // Set expiry date (30 days from now)
-    $expiry_date = date('Y-m-d H:i:s', strtotime('+30 days'));
-    update_post_meta($job_id, 'job_expiry_date', $expiry_date);
-
-    // Send success response
-    wp_send_json_success(array(
-        'message' => 'Job ' . ($editing ? 'updated' : 'posted') . ' successfully!',
-        'redirect_url' => add_query_arg('tab', 'manage-jobs', remove_query_arg('job_id'))
-    ));
 }
 add_action('wp_ajax_post_job', 'giggajob_handle_job_submission');
+
+// Add filter to control when featured images are displayed
+add_filter('post_thumbnail_html', 'giggajob_filter_job_thumbnail', 10, 5);
+function giggajob_filter_job_thumbnail($html, $post_id, $post_thumbnail_id, $size, $attr) {
+    // Only show featured images on single job pages
+    if (get_post_type($post_id) === 'jobs' && !is_singular('jobs')) {
+        return '';
+    }
+    return $html;
+}
 
 // Theme Setup
 function giggajob_theme_setup() {
@@ -1338,61 +1399,64 @@ function giggajob_save_job_meta_box($post_id) {
 }
 add_action('save_post_jobs', 'giggajob_save_job_meta_box');
 
-// Handle Application Actions (reject, cancel interview)
-add_action('wp_ajax_handle_application_action', 'giggajob_handle_application_action');
-function giggajob_handle_application_action() {
-    // Check nonce
-    if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'giggajob_nonce')) {
-        wp_send_json_error(array('message' => 'Security check failed.'));
+/**
+ * Handle application actions (reject, cancel interview)
+ */
+function handle_application_action() {
+    // Verify nonce
+    if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'application_action_nonce')) {
+        wp_send_json_error(array('message' => 'Security check failed'));
+        return;
     }
 
-    // Check if user is logged in and is an employer
-    if (!is_user_logged_in() || !in_array('employer', wp_get_current_user()->roles)) {
-        wp_send_json_error(array('message' => 'Permission denied.'));
+    // Get current user
+    $current_user = wp_get_current_user();
+    if (!$current_user->ID) {
+        wp_send_json_error(array('message' => 'User not logged in'));
+        return;
     }
 
+    // Get and validate application ID
     $application_id = isset($_POST['application_id']) ? intval($_POST['application_id']) : 0;
+    if (!$application_id) {
+        wp_send_json_error(array('message' => 'Invalid application ID'));
+        return;
+    }
+
+    // Get and validate action
     $action = isset($_POST['application_action']) ? sanitize_text_field($_POST['application_action']) : '';
-
-    if (!$application_id || !$action) {
-        wp_send_json_error(array('message' => 'Invalid request parameters.'));
+    if (!in_array($action, array('reject', 'cancel_interview'))) {
+        wp_send_json_error(array('message' => 'Invalid action'));
+        return;
     }
 
-    // Get the application
-    $application = get_post($application_id);
-    if (!$application || $application->post_type !== 'job_application') {
-        wp_send_json_error(array('message' => 'Invalid application.'));
-    }
-
-    // Get the associated job
+    // Get the job ID associated with this application
     $job_id = get_post_meta($application_id, 'job_id', true);
     $job = get_post($job_id);
 
-    // Verify ownership
-    if (!$job || $job->post_author != get_current_user_id()) {
-        wp_send_json_error(array('message' => 'Permission denied.'));
+    // Verify user owns this job
+    if (!$job || $job->post_author != $current_user->ID) {
+        wp_send_json_error(array('message' => 'Permission denied'));
+        return;
     }
 
+    // Process the action
     switch ($action) {
         case 'reject':
             update_post_meta($application_id, 'status', 'rejected');
-            wp_send_json_success(array('message' => 'Application rejected successfully.'));
             break;
-
         case 'cancel_interview':
             update_post_meta($application_id, 'status', 'pending');
             delete_post_meta($application_id, 'interview_date');
             delete_post_meta($application_id, 'interview_time');
             delete_post_meta($application_id, 'interview_location');
             delete_post_meta($application_id, 'interview_message');
-            wp_send_json_success(array('message' => 'Interview cancelled successfully.'));
-            break;
-
-        default:
-            wp_send_json_error(array('message' => 'Invalid action.'));
             break;
     }
+
+    wp_send_json_success(array('message' => 'Action completed successfully'));
 }
+add_action('wp_ajax_handle_application_action', 'handle_application_action');
 
 // Handle Interview Scheduling
 add_action('wp_ajax_handle_interview_schedule', 'giggajob_handle_interview_schedule');

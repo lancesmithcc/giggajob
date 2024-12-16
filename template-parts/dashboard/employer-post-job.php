@@ -241,6 +241,24 @@ if ($job_id) {
                     <div class="invalid-feedback">Please select a remote work option.</div>
                 </div>
 
+                <!-- Featured Image -->
+                <div class="col-12 mb-3">
+                    <label for="job_featured_image" class="form-label">Featured Image</label>
+                    <div class="featured-image-preview mb-2">
+                        <?php if ($editing && has_post_thumbnail($job_id)): ?>
+                            <?php echo get_the_post_thumbnail($job_id, 'medium', array('class' => 'img-fluid rounded')); ?>
+                        <?php endif; ?>
+                    </div>
+                    <input type="hidden" name="job_featured_image_id" id="job_featured_image_id" value="<?php echo $editing ? get_post_thumbnail_id($job_id) : ''; ?>">
+                    <button type="button" class="btn btn-outline-primary" id="upload_featured_image">
+                        <i class="bi bi-upload me-2"></i>Upload Featured Image
+                    </button>
+                    <button type="button" class="btn btn-outline-danger <?php echo (!$editing || !has_post_thumbnail($job_id)) ? 'd-none' : ''; ?>" id="remove_featured_image">
+                        <i class="bi bi-trash me-2"></i>Remove Image
+                    </button>
+                    <small class="form-text text-muted d-block mt-2">Recommended size: 1200x630 pixels</small>
+                </div>
+
                 <!-- Job Description -->
                 <div class="col-12">
                     <label for="job_description" class="form-label">Job Description *</label>
@@ -298,9 +316,15 @@ if ($job_id) {
                     return;
                 }
 
+                // Get TinyMCE content before form submission
+                if (typeof tinyMCE !== 'undefined' && tinyMCE.get('job_description')) {
+                    var description = tinyMCE.get('job_description').getContent();
+                    // Update the textarea with TinyMCE content
+                    $('#job_description').val(description);
+                }
+
                 var formData = new FormData(this);
                 formData.append('action', 'post_job');
-                formData.append('job_nonce', giggajob_ajax.nonce);
                 
                 $.ajax({
                     url: giggajob_ajax.ajax_url,
@@ -314,6 +338,7 @@ if ($job_id) {
                         );
                     },
                     success: function(response) {
+                        console.log('Response:', response); // Add this for debugging
                         if (response.success) {
                             window.location.href = response.data.redirect_url;
                         } else {
@@ -321,8 +346,11 @@ if ($job_id) {
                         }
                     },
                     error: function(xhr, status, error) {
-                        console.error('AJAX Error:', status, error);
-                        alert('An error occurred while posting the job. Please try again.');
+                        console.error('AJAX Error Status:', status);
+                        console.error('AJAX Error:', error);
+                        console.error('Server Response:', xhr.responseText);
+                        console.error('Response Headers:', xhr.getAllResponseHeaders());
+                        alert('An error occurred while posting the job. Please check the console for details.');
                     },
                     complete: function() {
                         $('button[type="submit"]').prop('disabled', false).html(
@@ -343,6 +371,40 @@ if ($job_id) {
                     height: 300
                 });
             }
+
+            // Featured Image Handling
+            var mediaUploader;
+            $('#upload_featured_image').click(function(e) {
+                e.preventDefault();
+
+                if (mediaUploader) {
+                    mediaUploader.open();
+                    return;
+                }
+
+                mediaUploader = wp.media({
+                    title: 'Choose Featured Image',
+                    button: {
+                        text: 'Use this image'
+                    },
+                    multiple: false
+                });
+
+                mediaUploader.on('select', function() {
+                    var attachment = mediaUploader.state().get('selection').first().toJSON();
+                    $('#job_featured_image_id').val(attachment.id);
+                    $('.featured-image-preview').html('<img src="' + attachment.sizes.medium.url + '" class="img-fluid rounded">');
+                    $('#remove_featured_image').removeClass('d-none');
+                });
+
+                mediaUploader.open();
+            });
+
+            $('#remove_featured_image').click(function() {
+                $('#job_featured_image_id').val('');
+                $('.featured-image-preview').empty();
+                $(this).addClass('d-none');
+            });
         });
         </script>
     <?php endif; ?>

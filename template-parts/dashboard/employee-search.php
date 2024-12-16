@@ -1,365 +1,299 @@
 <?php
+/**
+ * Template part for displaying employee job search
+ */
+
+// Security check
 if (!defined('ABSPATH')) exit;
 
-// Get all job categories
-$job_categories = get_terms([
-    'taxonomy' => 'job_category',
-    'hide_empty' => false,
-]);
+// Get search parameters
+$search_query = isset($_GET['s']) ? sanitize_text_field($_GET['s']) : '';
+$selected_industry = isset($_GET['industry']) ? sanitize_text_field($_GET['industry']) : '';
+$selected_type = isset($_GET['job_type']) ? sanitize_text_field($_GET['job_type']) : '';
+$selected_remote = isset($_GET['remote_option']) ? sanitize_text_field($_GET['remote_option']) : '';
 
-// Get unique locations from existing jobs
-global $wpdb;
-$locations = $wpdb->get_col("
-    SELECT DISTINCT meta_value 
-    FROM {$wpdb->postmeta} 
-    WHERE meta_key = 'job_location' 
-    AND meta_value != ''
-");
+// Get all industries
+$industries = get_terms(array(
+    'taxonomy' => 'industry',
+    'hide_empty' => true
+));
 
-// Get employment types
-$employment_types = $wpdb->get_col("
-    SELECT DISTINCT meta_value 
-    FROM {$wpdb->postmeta} 
-    WHERE meta_key = 'job_type' 
-    AND meta_value != ''
-");
+// Job types
+$job_types = array(
+    'full-time' => 'Full Time',
+    'part-time' => 'Part Time',
+    'contract' => 'Contract',
+    'temporary' => 'Temporary',
+    'internship' => 'Internship'
+);
 
-// Get current search parameters
-$search_query = isset($_GET['job_search']) ? sanitize_text_field($_GET['job_search']) : '';
-$selected_category = isset($_GET['category']) ? sanitize_text_field($_GET['category']) : '';
-$selected_location = isset($_GET['location']) ? sanitize_text_field($_GET['location']) : '';
-$selected_type = isset($_GET['type']) ? sanitize_text_field($_GET['type']) : '';
-
-// Simplified query to get all jobs first
-$args = [
-    'post_type' => 'jobs',
-    'posts_per_page' => -1, // Get all posts for debugging
-    'post_status' => ['publish', 'draft', 'pending'], // Include all statuses for debugging
-];
-
-$jobs_query = new WP_Query($args);
-
-// Debug information
-if (current_user_can('administrator')) {
-    echo '<div class="alert alert-info">';
-    echo '<h5>Debug Information:</h5>';
-    echo '<pre>';
-    echo 'Total posts found: ' . $jobs_query->found_posts . "\n";
-    echo 'Query parameters: ' . print_r($args, true) . "\n";
-    echo 'Last SQL Query: ' . $jobs_query->request . "\n";
-    echo '</pre>';
-    echo '</div>';
-}
-
-// Get current user's applications
-$current_user_id = get_current_user_id();
-$user_applications = get_posts([
-    'post_type' => 'job_application',
-    'author' => $current_user_id,
-    'posts_per_page' => -1,
-    'fields' => 'ids'
-]);
-
-$applied_job_ids = [];
-foreach ($user_applications as $application_id) {
-    $job_id = get_post_meta($application_id, 'job_id', true);
-    if ($job_id) {
-        $applied_job_ids[] = $job_id;
-    }
-}
+// Remote options
+$remote_options = array(
+    'no' => 'Office Only',
+    'hybrid' => 'Hybrid',
+    'yes' => 'Fully Remote'
+);
 ?>
 
-<div class="card bg-dark border-secondary mb-4">
-    <div class="card-body">
-        <h4 class="card-title mb-4">Search Jobs</h4>
-        
-        <form method="get" class="mb-4">
-            <input type="hidden" name="tab" value="search">
-            
-            <div class="row g-3">
-                <!-- Search Query -->
-                <div class="col-md-12">
-                    <div class="form-floating">
-                        <input type="text" class="form-control bg-dark text-light border-secondary" 
-                               id="job_search" name="job_search" placeholder="Search jobs..."
-                               value="<?php echo esc_attr($search_query); ?>">
-                        <label for="job_search">Search jobs...</label>
+<div class="job-search-section">
+    <!-- Search Form -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form action="<?php echo esc_url(add_query_arg(array('tab' => 'search'), remove_query_arg(array('paged', 'page')))); ?>" method="get">
+                <input type="hidden" name="tab" value="search">
+                <div class="row g-3">
+                    <!-- Keyword Search -->
+                    <div class="col-md-12">
+                        <div class="input-group">
+                            <span class="input-group-text bg-dark border-end-0">
+                                <i class="bi bi-search"></i>
+                            </span>
+                            <input type="text" class="form-control border-start-0" 
+                                   name="s" value="<?php echo esc_attr($search_query); ?>" 
+                                   placeholder="Job title, keywords, or company">
+                        </div>
                     </div>
-                </div>
 
-                <!-- Category Filter -->
-                <div class="col-md-4">
-                    <div class="form-floating">
-                        <select class="form-select bg-dark text-light border-secondary" 
-                                id="category" name="category">
-                            <option value="">All Categories</option>
-                            <?php foreach ($job_categories as $category): ?>
-                                <option value="<?php echo esc_attr($category->slug); ?>" 
-                                        <?php selected($selected_category, $category->slug); ?>>
-                                    <?php echo esc_html($category->name); ?>
+                    <!-- Industry Filter -->
+                    <div class="col-md-4">
+                        <select class="form-select" name="industry">
+                            <option value="">All Industries</option>
+                            <?php foreach ($industries as $industry): ?>
+                                <option value="<?php echo esc_attr($industry->slug); ?>" 
+                                        <?php selected($selected_industry, $industry->slug); ?>>
+                                    <?php echo esc_html($industry->name); ?>
                                 </option>
                             <?php endforeach; ?>
                         </select>
-                        <label for="category">Category</label>
                     </div>
-                </div>
 
-                <!-- Location Filter -->
-                <div class="col-md-4">
-                    <div class="form-floating">
-                        <select class="form-select bg-dark text-light border-secondary" 
-                                id="location" name="location">
-                            <option value="">All Locations</option>
-                            <?php foreach ($locations as $location): ?>
-                                <option value="<?php echo esc_attr($location); ?>" 
-                                        <?php selected($selected_location, $location); ?>>
-                                    <?php echo esc_html($location); ?>
+                    <!-- Job Type Filter -->
+                    <div class="col-md-4">
+                        <select class="form-select" name="job_type">
+                            <option value="">All Job Types</option>
+                            <?php foreach ($job_types as $value => $label): ?>
+                                <option value="<?php echo esc_attr($value); ?>" 
+                                        <?php selected($selected_type, $value); ?>>
+                                    <?php echo esc_html($label); ?>
                                 </option>
                             <?php endforeach; ?>
                         </select>
-                        <label for="location">Location</label>
                     </div>
-                </div>
 
-                <!-- Employment Type Filter -->
-                <div class="col-md-4">
-                    <div class="form-floating">
-                        <select class="form-select bg-dark text-light border-secondary" 
-                                id="type" name="type">
-                            <option value="">All Types</option>
-                            <?php foreach ($employment_types as $type): ?>
-                                <option value="<?php echo esc_attr($type); ?>" 
-                                        <?php selected($selected_type, $type); ?>>
-                                    <?php echo esc_html($type); ?>
+                    <!-- Remote Option Filter -->
+                    <div class="col-md-4">
+                        <select class="form-select" name="remote_option">
+                            <option value="">Any Work Style</option>
+                            <?php foreach ($remote_options as $value => $label): ?>
+                                <option value="<?php echo esc_attr($value); ?>" 
+                                        <?php selected($selected_remote, $value); ?>>
+                                    <?php echo esc_html($label); ?>
                                 </option>
                             <?php endforeach; ?>
                         </select>
-                        <label for="type">Employment Type</label>
+                    </div>
+
+                    <!-- Search Button -->
+                    <div class="col-12">
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="bi bi-search me-2"></i>Search Jobs
+                        </button>
                     </div>
                 </div>
-
-                <!-- Search Button -->
-                <div class="col-12">
-                    <button type="submit" class="btn btn-primary">
-                        <i class="bi bi-search me-2"></i>Search
-                    </button>
-                    <?php if (!empty($_GET)): ?>
-                        <a href="<?php echo add_query_arg('tab', 'search', remove_query_arg(['job_search', 'category', 'location', 'type'])); ?>" 
-                           class="btn btn-secondary ms-2">
-                            <i class="bi bi-x-circle me-2"></i>Clear Filters
-                        </a>
-                    <?php endif; ?>
-                </div>
-            </div>
-        </form>
-
-        <!-- Results -->
-        <?php if ($jobs_query->have_posts()): ?>
-            <div class="table-responsive">
-                <table class="table table-dark table-hover">
-                    <thead>
-                        <tr>
-                            <th>Title</th>
-                            <th>Company</th>
-                            <th>Category</th>
-                            <th>Location</th>
-                            <th>Type</th>
-                            <th>Salary</th>
-                            <th>Posted</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php while ($jobs_query->have_posts()): $jobs_query->the_post(); 
-                            $job_id = get_the_ID();
-                            $job_category = wp_get_post_terms($job_id, 'job_category', ['fields' => 'names']);
-                            $job_location = get_post_meta($job_id, 'job_location', true);
-                            $job_type = get_post_meta($job_id, 'job_type', true);
-                            $job_salary = get_post_meta($job_id, 'job_salary', true);
-                            $employer_id = get_post_field('post_author', $job_id);
-                            $employer_profile = get_posts([
-                                'post_type' => 'employer_profile',
-                                'author' => $employer_id,
-                                'posts_per_page' => 1
-                            ]);
-                            $company_name = !empty($employer_profile) ? get_the_title($employer_profile[0]) : 'Unknown Company';
-                            $has_applied = in_array($job_id, $applied_job_ids);
-                            $show_application_form = isset($_GET['apply']) && $_GET['apply'] == $job_id;
-                        ?>
-                            <tr>
-                                <td>
-                                    <a href="<?php the_permalink(); ?>" class="text-decoration-none">
-                                        <?php the_title(); ?>
-                                    </a>
-                                </td>
-                                <td><?php echo esc_html($company_name); ?></td>
-                                <td><?php echo implode(', ', $job_category); ?></td>
-                                <td><?php echo esc_html($job_location); ?></td>
-                                <td><?php echo esc_html($job_type); ?></td>
-                                <td><?php echo esc_html($job_salary); ?></td>
-                                <td><?php echo get_the_date(); ?></td>
-                                <td>
-                                    <a href="<?php the_permalink(); ?>" class="btn btn-sm btn-primary">
-                                        <i class="bi bi-eye"></i>
-                                    </a>
-                                    <?php if ($has_applied): ?>
-                                        <button class="btn btn-sm btn-success" disabled>
-                                            <i class="bi bi-check-circle"></i> Applied
-                                        </button>
-                                    <?php else: ?>
-                                        <a href="<?php echo add_query_arg(['tab' => 'search', 'apply' => $job_id]); ?>" 
-                                           class="btn btn-sm btn-outline-primary">
-                                            <i class="bi bi-send"></i> Apply
-                                        </a>
-                                    <?php endif; ?>
-                                </td>
-                            </tr>
-                            <?php if ($show_application_form): 
-                                // Get the user's resume
-                                $resume = get_posts([
-                                    'post_type' => 'resume',
-                                    'author' => get_current_user_id(),
-                                    'posts_per_page' => 1
-                                ]);
-                                
-                                if (empty($resume)): ?>
-                                    <tr class="application-form-row">
-                                        <td colspan="8">
-                                            <div class="alert alert-warning">
-                                                <i class="bi bi-exclamation-triangle me-2"></i>
-                                                Please create your resume first before applying for jobs.
-                                                <a href="<?php echo add_query_arg('tab', 'resume'); ?>" class="btn btn-warning btn-sm ms-3">
-                                                    Create Resume
-                                                </a>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                <?php else: ?>
-                                    <tr class="application-form-row">
-                                        <td colspan="8">
-                                            <div class="card bg-dark border-secondary">
-                                                <div class="card-body">
-                                                    <h5 class="card-title">Apply for <?php the_title(); ?></h5>
-                                                    <form action="" method="post" class="job-application-form" id="job-application-form-<?php echo $job_id; ?>">
-                                                        <?php wp_nonce_field('submit_job_application', 'job_application_nonce'); ?>
-                                                        <input type="hidden" name="action" value="submit_job_application">
-                                                        <input type="hidden" name="job_id" value="<?php echo $job_id; ?>">
-                                                        <input type="hidden" name="resume_id" value="<?php echo $resume[0]->ID; ?>">
-                                                        
-                                                        <div class="mb-3">
-                                                            <label for="cover_letter" class="form-label">Cover Letter</label>
-                                                            <textarea class="form-control bg-dark text-light border-secondary" 
-                                                                    id="cover_letter" name="cover_letter" rows="5" 
-                                                                    placeholder="Tell us why you're a great fit for this position..." 
-                                                                    required></textarea>
-                                                        </div>
-
-                                                        <div class="d-flex justify-content-between">
-                                                            <button type="submit" class="btn btn-primary">
-                                                                <i class="bi bi-send me-2"></i>Submit Application
-                                                            </button>
-                                                            <a href="<?php echo remove_query_arg('apply'); ?>" 
-                                                            class="btn btn-secondary">
-                                                                <i class="bi bi-x-circle me-2"></i>Cancel
-                                                            </a>
-                                                        </div>
-                                                    </form>
-                                                </div>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                <?php endif; ?>
-                            <?php endif; ?>
-                        <?php endwhile; ?>
-                    </tbody>
-                </table>
-            </div>
-
-            <!-- Pagination -->
-            <?php
-            echo '<div class="pagination justify-content-center">';
-            echo paginate_links([
-                'base' => add_query_arg('paged', '%#%'),
-                'format' => '',
-                'prev_text' => __('&laquo;'),
-                'next_text' => __('&raquo;'),
-                'total' => $jobs_query->max_num_pages,
-                'current' => max(1, get_query_var('paged')),
-                'type' => 'list'
-            ]);
-            echo '</div>';
-            ?>
-
-            <script>
-            jQuery(document).ready(function($) {
-                $('.job-application-form').on('submit', function(e) {
-                    e.preventDefault();
-                    var form = $(this);
-                    var submitBtn = form.find('button[type="submit"]');
-                    submitBtn.prop('disabled', true);
-
-                    $.ajax({
-                        url: giggajob_ajax.ajax_url,
-                        type: 'POST',
-                        data: form.serialize(),
-                        success: function(response) {
-                            if (response.success) {
-                                window.location.href = window.location.href.split('?')[0] + '?tab=applications';
-                            } else {
-                                alert(response.data.message || 'Application submission failed.');
-                                submitBtn.prop('disabled', false);
-                            }
-                        },
-                        error: function() {
-                            alert('An error occurred. Please try again.');
-                            submitBtn.prop('disabled', false);
-                        }
-                    });
-                });
-            });
-            </script>
-
-        <?php else: ?>
-            <div class="alert alert-info">
-                <i class="bi bi-info-circle me-2"></i>No jobs found matching your criteria.
-            </div>
-        <?php endif; 
-        wp_reset_postdata(); ?>
+            </form>
+        </div>
     </div>
+
+    <!-- Job Listings -->
+    <?php
+    // Build query arguments
+    $paged = (get_query_var('paged')) ? get_query_var('paged') : (get_query_var('page') ? get_query_var('page') : 1);
+    
+    // Base query arguments
+    $args = array(
+        'post_type' => 'jobs',
+        'posts_per_page' => 12,
+        'paged' => $paged,
+        'post_status' => 'publish'
+    );
+
+    // Add meta query for active jobs
+    $args['meta_query'] = array(
+        array(
+            'key' => 'job_status',
+            'value' => 'active',
+            'compare' => '='
+        )
+    );
+
+    // Add search query if exists
+    if (!empty($search_query)) {
+        $args['s'] = $search_query;
+    }
+
+    // Add industry filter
+    if (!empty($selected_industry)) {
+        $args['tax_query'] = array(
+            array(
+                'taxonomy' => 'industry',
+                'field' => 'slug',
+                'terms' => $selected_industry
+            )
+        );
+    }
+
+    // Add job type filter
+    if (!empty($selected_type)) {
+        $args['meta_query'][] = array(
+            'key' => 'job_type',
+            'value' => $selected_type,
+            'compare' => '='
+        );
+    }
+
+    // Add remote option filter
+    if (!empty($selected_remote)) {
+        $args['meta_query'][] = array(
+            'key' => 'remote_option',
+            'value' => $selected_remote,
+            'compare' => '='
+        );
+    }
+
+    // Handle sorting
+    $orderby = isset($_GET['orderby']) ? sanitize_text_field($_GET['orderby']) : 'date';
+    switch ($orderby) {
+        case 'title':
+            $args['orderby'] = 'title';
+            $args['order'] = 'ASC';
+            break;
+        case 'company':
+            $args['orderby'] = 'meta_value';
+            $args['meta_key'] = 'company_name';
+            $args['order'] = 'ASC';
+            break;
+        default: // date
+            $args['orderby'] = 'date';
+            $args['order'] = 'DESC';
+            break;
+    }
+
+    // Debug query for administrators
+    if (current_user_can('administrator') && isset($_GET['debug'])) {
+        echo '<pre class="bg-dark text-light p-3 mb-4">';
+        echo 'Query Args: ' . print_r($args, true);
+        echo '</pre>';
+    }
+
+    $jobs_query = new WP_Query($args);
+
+    // Debug results for administrators
+    if (current_user_can('administrator') && isset($_GET['debug'])) {
+        echo '<pre class="bg-dark text-light p-3 mb-4">';
+        echo 'Found Posts: ' . $jobs_query->found_posts . "\n";
+        echo 'Post Count: ' . $jobs_query->post_count . "\n";
+        echo 'Max Num Pages: ' . $jobs_query->max_num_pages . "\n";
+        echo 'Current Page: ' . $paged . "\n";
+        echo 'Request: ' . $jobs_query->request . "\n";
+        echo '</pre>';
+    }
+    ?>
+
+    <!-- Results Count and Sort -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div class="results-count">
+            <?php if ($jobs_query->have_posts()): ?>
+                <h2 class="h5 mb-0">
+                    Found <?php echo $jobs_query->found_posts; ?> job<?php echo $jobs_query->found_posts !== 1 ? 's' : ''; ?>
+                </h2>
+            <?php endif; ?>
+        </div>
+        <div class="sort-options">
+            <?php 
+            // Get current URL with all parameters except paged and orderby
+            $current_url = remove_query_arg(array('paged', 'page', 'orderby'));
+            ?>
+            <select class="form-select" id="sort-jobs" onchange="window.location.href=this.value">
+                <option value="<?php echo esc_url(add_query_arg('orderby', 'date', $current_url)); ?>" 
+                        <?php selected($orderby, 'date'); ?>>Most Recent</option>
+                <option value="<?php echo esc_url(add_query_arg('orderby', 'title', $current_url)); ?>" 
+                        <?php selected($orderby, 'title'); ?>>Job Title</option>
+                <option value="<?php echo esc_url(add_query_arg('orderby', 'company', $current_url)); ?>" 
+                        <?php selected($orderby, 'company'); ?>>Company</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- Job Cards -->
+    <?php if ($jobs_query->have_posts()): ?>
+        <div class="row g-4">
+            <?php 
+            while ($jobs_query->have_posts()): $jobs_query->the_post(); 
+                echo '<div class="col-md-6 col-lg-4">';
+                get_template_part('template-parts/content', 'jobs');
+                echo '</div>';
+            endwhile; 
+            wp_reset_postdata(); // Reset post data before pagination
+            ?>
+        </div>
+
+        <!-- Pagination -->
+        <?php if ($jobs_query->max_num_pages > 1): ?>
+            <div class="pagination-wrapper mt-5">
+                <?php
+                // Get the current page URL with all parameters
+                $current_url = add_query_arg(null, null);
+                
+                // Get the base URL (current page URL without pagination parameters)
+                $base_url = remove_query_arg(array('paged', 'page'), $current_url);
+                
+                // Make sure we preserve the tab parameter
+                if (!strpos($base_url, 'tab=')) {
+                    $base_url = add_query_arg('tab', 'search', $base_url);
+                }
+                
+                // Debug information for administrators
+                if (current_user_can('administrator') && isset($_GET['debug'])) {
+                    echo '<pre class="bg-dark text-light p-3 mt-3">';
+                    echo "Current URL: " . $current_url . "\n";
+                    echo "Base URL: " . $base_url . "\n";
+                    echo "Page: " . $paged . "\n";
+                    echo "Max Pages: " . $jobs_query->max_num_pages . "\n";
+                    echo "Query: " . $jobs_query->request . "\n";
+                    echo '</pre>';
+                }
+                
+                // Output the pagination links
+                echo paginate_links(array(
+                    'base' => add_query_arg('paged', '%#%', $base_url),
+                    'format' => '',
+                    'current' => $paged,
+                    'total' => $jobs_query->max_num_pages,
+                    'prev_text' => '<i class="bi bi-chevron-left"></i> Previous',
+                    'next_text' => 'Next <i class="bi bi-chevron-right"></i>',
+                    'type' => 'list',
+                    'end_size' => 2,
+                    'mid_size' => 2
+                ));
+                ?>
+            </div>
+        <?php endif; ?>
+
+    <?php else: ?>
+        <div class="no-results text-center py-5">
+            <i class="bi bi-search display-1 text-muted mb-4"></i>
+            <h3>No Jobs Found</h3>
+            <p class="text-muted">Try adjusting your search criteria or removing some filters.</p>
+        </div>
+    <?php endif; ?>
 </div>
 
-<style>
-/* Dark theme pagination styles */
-.pagination {
-    margin-top: 1rem;
-}
-.pagination .page-numbers {
-    position: relative;
-    display: block;
-    padding: 0.5rem 0.75rem;
-    margin-left: -1px;
-    line-height: 1.25;
-    color: #fff;
-    background-color: #343a40;
-    border: 1px solid #6c757d;
-    text-decoration: none;
-}
-.pagination .page-numbers:hover {
-    background-color: #2b3035;
-}
-.pagination .page-numbers.current {
-    background-color: #0d6efd;
-    border-color: #0d6efd;
-}
-.pagination .page-numbers.dots {
-    color: #6c757d;
-}
-
-/* Application form styles */
-.application-form-row {
-    background-color: #2b3035;
-}
-.application-form-row td {
-    padding: 1rem !important;
-}
-</style> 
+<script>
+jQuery(document).ready(function($) {
+    // Initialize select2 for better dropdowns
+    $('.form-select').select2({
+        theme: 'bootstrap-5',
+        width: '100%'
+    });
+});
+</script> 

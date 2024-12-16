@@ -57,31 +57,32 @@ $active_tab = isset($_GET['tab']) ? sanitize_text_field($_GET['tab']) : 'dashboa
 
             <!-- Main Content -->
             <div class="col-md-9">
-                <div class="card">
-                    <div class="card-body">
-                        <div class="tab-content mt-4">
-                            <?php
-                            switch ($active_tab) {
-                                case 'search':
-                                    get_template_part('template-parts/dashboard/employee', 'search');
-                                    break;
-                                case 'resume':
-                                    get_template_part('template-parts/dashboard/employee', 'resume');
-                                    break;
-                                case 'applications':
-                                    get_template_part('template-parts/dashboard/employee', 'applications');
-                                    break;
-                                case 'settings':
-                                    get_template_part('template-parts/dashboard/employee', 'settings');
-                                    break;
-                                default:
-                                    get_template_part('template-parts/dashboard/employee', 'overview');
-                                    break;
-                            }
-                            ?>
+                <?php if ($active_tab === 'search'): ?>
+                    <?php get_template_part('template-parts/dashboard/employee', 'search'); ?>
+                <?php else: ?>
+                    <div class="card">
+                        <div class="card-body">
+                            <div class="tab-content mt-4">
+                                <?php
+                                switch ($active_tab) {
+                                    case 'resume':
+                                        get_template_part('template-parts/dashboard/employee', 'resume');
+                                        break;
+                                    case 'applications':
+                                        get_template_part('template-parts/dashboard/employee', 'applications');
+                                        break;
+                                    case 'settings':
+                                        get_template_part('template-parts/dashboard/employee', 'settings');
+                                        break;
+                                    default:
+                                        get_template_part('template-parts/dashboard/employee', 'overview');
+                                        break;
+                                }
+                                ?>
+                            </div>
                         </div>
                     </div>
-                </div>
+                <?php endif; ?>
             </div>
         </div>
     </div>

@@ -71,31 +71,36 @@ $active_tab = isset($_GET['tab']) ? sanitize_text_field($_GET['tab']) : 'overvie
 
         <!-- Content -->
         <div class="dashboard-content">
-            <?php
-            switch ($active_tab) {
-                case 'post-job':
-                    get_template_part('template-parts/dashboard/employer', 'post-job');
-                    break;
-                case 'manage-jobs':
-                    get_template_part('template-parts/dashboard/employer', 'manage-jobs');
-                    break;
-                case 'applications':
-                    get_template_part('template-parts/dashboard/employer', 'applications');
-                    break;
-                case 'profile':
-                    get_template_part('template-parts/dashboard/employer', 'profile');
-                    break;
-                case 'settings':
-                    get_template_part('template-parts/dashboard/employer', 'settings');
-                    break;
-                case 'search':
-                    get_template_part('template-parts/dashboard/employer', 'search');
-                    break;
-                default:
-                    get_template_part('template-parts/dashboard/employer', 'overview');
-                    break;
-            }
-            ?>
+            <?php if ($active_tab === 'search'): ?>
+                <?php get_template_part('template-parts/dashboard/employer', 'search'); ?>
+            <?php else: ?>
+                <div class="card">
+                    <div class="card-body">
+                        <?php
+                        switch ($active_tab) {
+                            case 'post-job':
+                                get_template_part('template-parts/dashboard/employer', 'post-job');
+                                break;
+                            case 'manage-jobs':
+                                get_template_part('template-parts/dashboard/employer', 'manage-jobs');
+                                break;
+                            case 'applications':
+                                get_template_part('template-parts/dashboard/employer', 'applications');
+                                break;
+                            case 'profile':
+                                get_template_part('template-parts/dashboard/employer', 'profile');
+                                break;
+                            case 'settings':
+                                get_template_part('template-parts/dashboard/employer', 'settings');
+                                break;
+                            default:
+                                get_template_part('template-parts/dashboard/employer', 'overview');
+                                break;
+                        }
+                        ?>
+                    </div>
+                </div>
+            <?php endif; ?>
         </div>
     </div>
 </div>
