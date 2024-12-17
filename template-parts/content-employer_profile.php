@@ -106,21 +106,21 @@ if (!defined('ABSPATH')) exit;
                                         <?php the_title(); ?>
                                     </a>
                                 </h3>
-                                <div class="job-meta text-muted small">
+                                <div class="job-meta">
                                     <?php
-                                    $job_type = get_post_meta(get_the_ID(), 'job_type', true);
-                                    $job_location = get_post_meta(get_the_ID(), 'job_location', true);
+                                    // Get job types
+                                    $job_types = get_the_terms(get_the_ID(), 'job_type');
+                                    if ($job_types && !is_wp_error($job_types)) {
+                                        echo '<p class="mb-2">';
+                                        echo '<i class="bi bi-briefcase"></i> ';
+                                        $type_names = array();
+                                        foreach ($job_types as $type) {
+                                            $type_names[] = esc_html($type->name);
+                                        }
+                                        echo implode(', ', $type_names);
+                                        echo '</p>';
+                                    }
                                     ?>
-                                    <?php if ($job_type): ?>
-                                        <span class="job-type me-3">
-                                            <i class="bi bi-briefcase"></i> <?php echo esc_html($job_type); ?>
-                                        </span>
-                                    <?php endif; ?>
-                                    <?php if ($job_location): ?>
-                                        <span class="job-location">
-                                            <i class="bi bi-geo-alt"></i> <?php echo esc_html($job_location); ?>
-                                        </span>
-                                    <?php endif; ?>
                                 </div>
                             </div>
                         <?php endwhile; ?>

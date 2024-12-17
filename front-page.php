@@ -17,14 +17,11 @@ $industries = get_terms(array(
     'hide_empty' => true
 ));
 
-// Job types
-$job_types = array(
-    'full-time' => 'Full Time',
-    'part-time' => 'Part Time',
-    'contract' => 'Contract',
-    'temporary' => 'Temporary',
-    'internship' => 'Internship'
-);
+// Get job types from taxonomy
+$job_types = get_terms(array(
+    'taxonomy' => 'job_type',
+    'hide_empty' => true
+));
 
 // Remote options
 $remote_options = array(
@@ -76,10 +73,10 @@ $remote_options = array(
                             <div class="col-md-4">
                                 <select class="form-select" name="job_type">
                                     <option value="">All Job Types</option>
-                                    <?php foreach ($job_types as $value => $label): ?>
-                                        <option value="<?php echo esc_attr($value); ?>" 
-                                                <?php selected($selected_type, $value); ?>>
-                                            <?php echo esc_html($label); ?>
+                                    <?php foreach ($job_types as $type): ?>
+                                        <option value="<?php echo esc_attr($type->slug); ?>" 
+                                                <?php selected($selected_type, $type->slug); ?>>
+                                            <?php echo esc_html($type->name); ?>
                                         </option>
                                     <?php endforeach; ?>
                                 </select>
@@ -147,10 +144,10 @@ $remote_options = array(
 
             // Add job type filter
             if (!empty($selected_type)) {
-                $args['meta_query'][] = array(
-                    'key' => 'job_type',
-                    'value' => $selected_type,
-                    'compare' => '='
+                $args['tax_query'][] = array(
+                    'taxonomy' => 'job_type',
+                    'field' => 'slug',
+                    'terms' => $selected_type
                 );
             }
 

@@ -1,47 +1,9 @@
 <?php
 if (!defined('ABSPATH')) exit;
 
-// Include the Bootstrap 5 Nav Walker
+// Include required files
 require_once get_template_directory() . '/inc/class-bootstrap-5-nav-walker.php';
-
-// Register Custom Taxonomies
-function giggajob_register_taxonomies() {
-    // Industries Taxonomy
-    register_taxonomy('industry', array('jobs', 'employer_profile'), array(
-        'labels' => array(
-            'name' => __('Industries', 'giggajob'),
-            'singular_name' => __('Industry', 'giggajob'),
-            'search_items' => __('Search Industries', 'giggajob'),
-            'all_items' => __('All Industries', 'giggajob'),
-            'parent_item' => __('Parent Industry', 'giggajob'),
-            'parent_item_colon' => __('Parent Industry:', 'giggajob'),
-            'edit_item' => __('Edit Industry', 'giggajob'),
-            'update_item' => __('Update Industry', 'giggajob'),
-            'add_new_item' => __('Add New Industry', 'giggajob'),
-            'new_item_name' => __('New Industry Name', 'giggajob'),
-            'menu_name' => __('Industries', 'giggajob'),
-        ),
-        'hierarchical' => true,
-        'show_ui' => true,
-        'show_admin_column' => true,
-        'query_var' => true,
-        'rewrite' => array('slug' => 'industry'),
-        'show_in_rest' => true, // Enable Gutenberg editor support
-    ));
-}
-add_action('init', 'giggajob_register_taxonomies');
-
-// Function to organize taxonomy terms hierarchically
-function organize_terms_hierarchically($terms, $parent_id = 0) {
-    $children = array();
-    foreach ($terms as $term) {
-        if ($term->parent == $parent_id) {
-            $term->children = organize_terms_hierarchically($terms, $term->term_id);
-            $children[] = $term;
-        }
-    }
-    return $children;
-}
+require_once get_template_directory() . '/inc/post-types.php';  // Add this line
 
 // Handle Job Submission
 function giggajob_handle_job_submission() {
@@ -231,270 +193,6 @@ function giggajob_theme_setup() {
     ));
 }
 add_action('after_setup_theme', 'giggajob_theme_setup');
-
-// Register Custom Post Types
-function giggajob_register_post_types() {
-    // Jobs Post Type
-    register_post_type('jobs', array(
-        'labels' => array(
-            'name' => __('Jobs', 'giggajob'),
-            'singular_name' => __('Job', 'giggajob'),
-            'add_new' => __('Add New Job', 'giggajob'),
-            'add_new_item' => __('Add New Job', 'giggajob'),
-            'edit_item' => __('Edit Job', 'giggajob'),
-        ),
-        'public' => true,
-        'has_archive' => true,
-        'show_in_rest' => true,
-        'menu_icon' => 'dashicons-businessman',
-        'supports' => array('title', 'editor', 'thumbnail', 'custom-fields'),
-        'rewrite' => array('slug' => 'jobs'),
-        'capability_type' => 'job',
-        'map_meta_cap' => true,
-        'capabilities' => array(
-            'edit_post' => 'edit_job',
-            'read_post' => 'read_job',
-            'delete_post' => 'delete_job',
-            'edit_posts' => 'edit_jobs',
-            'edit_others_posts' => 'edit_others_jobs',
-            'publish_posts' => 'publish_jobs',
-            'read_private_posts' => 'read_private_jobs',
-            'delete_posts' => 'delete_jobs'
-        ),
-        'taxonomies' => array('industry')
-    ));
-
-    // Job Applications Post Type
-    register_post_type('job_application', array(
-        'labels' => array(
-            'name' => __('Job Applications', 'giggajob'),
-            'singular_name' => __('Job Application', 'giggajob'),
-            'add_new' => __('Add New Application', 'giggajob'),
-            'add_new_item' => __('Add New Application', 'giggajob'),
-            'edit_item' => __('Edit Application', 'giggajob'),
-        ),
-        'public' => false,
-        'show_ui' => true,
-        'show_in_menu' => true,
-        'menu_icon' => 'dashicons-portfolio',
-        'supports' => array('title', 'custom-fields'),
-        'capability_type' => 'application',
-        'map_meta_cap' => true,
-        'capabilities' => array(
-            'edit_post' => 'edit_application',
-            'read_post' => 'read_application',
-            'delete_post' => 'delete_application',
-            'edit_posts' => 'edit_applications',
-            'edit_others_posts' => 'edit_others_applications',
-            'publish_posts' => 'publish_applications',
-            'read_private_posts' => 'read_private_applications',
-            'delete_posts' => 'delete_applications'
-        )
-    ));
-
-    // Resume Post Type
-    register_post_type('resume', array(
-        'labels' => array(
-            'name' => __('Resumes', 'giggajob'),
-            'singular_name' => __('Resume', 'giggajob'),
-            'add_new' => __('Add New Resume', 'giggajob'),
-            'add_new_item' => __('Add New Resume', 'giggajob'),
-            'edit_item' => __('Edit Resume', 'giggajob'),
-        ),
-        'public' => true,
-        'has_archive' => true,
-        'show_in_rest' => true,
-        'menu_icon' => 'dashicons-id',
-        'supports' => array('title', 'editor', 'thumbnail', 'custom-fields'),
-        'rewrite' => array('slug' => 'resumes'),
-        'capability_type' => 'resume',
-        'map_meta_cap' => true,
-        'capabilities' => array(
-            'edit_post' => 'edit_resume',
-            'read_post' => 'read_resume',
-            'delete_post' => 'delete_resume',
-            'edit_posts' => 'edit_resumes',
-            'edit_others_posts' => 'edit_others_resumes',
-            'publish_posts' => 'publish_resumes',
-            'read_private_posts' => 'read_private_resumes',
-            'delete_posts' => 'delete_resumes'
-        )
-    ));
-
-    // Employer Profile Post Type
-    register_post_type('employer_profile', array(
-        'labels' => array(
-            'name' => __('Employer Profiles', 'giggajob'),
-            'singular_name' => __('Employer Profile', 'giggajob'),
-            'add_new' => __('Add New Profile', 'giggajob'),
-            'add_new_item' => __('Add New Profile', 'giggajob'),
-            'edit_item' => __('Edit Profile', 'giggajob'),
-        ),
-        'public' => true,
-        'has_archive' => true,
-        'show_in_rest' => true,
-        'menu_icon' => 'dashicons-building',
-        'supports' => array('title', 'editor', 'thumbnail', 'custom-fields'),
-        'rewrite' => array('slug' => 'employer-profiles'),
-        'capability_type' => 'employer_profile',
-        'map_meta_cap' => true,
-        'capabilities' => array(
-            'edit_post' => 'edit_employer_profile',
-            'read_post' => 'read_employer_profile',
-            'delete_post' => 'delete_employer_profile',
-            'edit_posts' => 'edit_employer_profiles',
-            'edit_others_posts' => 'edit_others_employer_profiles',
-            'publish_posts' => 'publish_employer_profiles',
-            'read_private_posts' => 'read_private_employer_profiles',
-            'delete_posts' => 'delete_employer_profiles'
-        ),
-        'taxonomies' => array('industry')
-    ));
-}
-add_action('init', 'giggajob_register_post_types');
-
-// Create custom user roles on theme activation
-function giggajob_create_user_roles() {
-    error_log('=== Creating Custom User Roles ===');
-    
-    // Remove roles first to ensure clean setup
-    remove_role('employee');
-    remove_role('employer');
-    
-    // Add the employee role
-    $employee = add_role('employee', 'Employee', array(
-        'read' => true,
-        'upload_files' => true,
-        // Resume capabilities
-        'edit_resume' => true,
-        'read_resume' => true,
-        'delete_resume' => true,
-        'edit_resumes' => true,
-        'publish_resumes' => true,
-        'edit_published_resumes' => true,
-        'delete_published_resumes' => true,
-        // Application capabilities
-        'edit_application' => true,
-        'read_application' => true,
-        'delete_application' => true,
-        'edit_applications' => true,
-        'publish_applications' => true
-    ));
-    
-    if (is_null($employee)) {
-        error_log('Failed to create employee role');
-    } else {
-        error_log('Employee role created successfully');
-    }
-
-    // Add the employer role
-    $employer = add_role('employer', 'Employer', array(
-        'read' => true,
-        'upload_files' => true,
-        // Job capabilities
-        'edit_job' => true,
-        'read_job' => true,
-        'delete_job' => true,
-        'edit_jobs' => true,
-        'publish_jobs' => true,
-        'edit_published_jobs' => true,
-        'delete_published_jobs' => true,
-        // Employer profile capabilities
-        'edit_employer_profile' => true,
-        'read_employer_profile' => true,
-        'delete_employer_profile' => true,
-        'edit_employer_profiles' => true,
-        'publish_employer_profiles' => true,
-        // Application capabilities
-        'edit_application' => true,
-        'read_application' => true,
-        'delete_application' => true,
-        'edit_applications' => true,
-        'publish_applications' => true
-    ));
-    
-    if (is_null($employer)) {
-        error_log('Failed to create employer role');
-    } else {
-        error_log('Employer role created successfully');
-    }
-}
-
-// Hook into theme activation and switch
-add_action('after_switch_theme', 'giggajob_create_user_roles');
-add_action('after_setup_theme', 'giggajob_create_user_roles');
-
-// Add custom capabilities to roles
-function giggajob_add_role_caps() {
-    error_log('=== Adding Role Capabilities ===');
-    
-    // Get the employer role
-    $employer = get_role('employer');
-    if ($employer) {
-        error_log('Adding employer capabilities');
-        $employer_caps = array(
-            'read' => true,
-            'upload_files' => true,
-            // Job capabilities
-            'edit_job' => true,
-            'read_job' => true,
-            'delete_job' => true,
-            'edit_jobs' => true,
-            'publish_jobs' => true,
-            'edit_published_jobs' => true,
-            'delete_published_jobs' => true,
-            // Employer profile capabilities
-            'edit_employer_profile' => true,
-            'read_employer_profile' => true,
-            'delete_employer_profile' => true,
-            'edit_employer_profiles' => true,
-            'publish_employer_profiles' => true,
-            // Application capabilities
-            'edit_application' => true,
-            'read_application' => true,
-            'delete_application' => true,
-            'edit_applications' => true,
-            'publish_applications' => true
-        );
-        
-        foreach ($employer_caps as $cap => $grant) {
-            $employer->add_cap($cap, $grant);
-        }
-    } else {
-        error_log('Employer role not found');
-    }
-
-    // Get the employee role
-    $employee = get_role('employee');
-    if ($employee) {
-        error_log('Adding employee capabilities');
-        $employee_caps = array(
-            'read' => true,
-            'upload_files' => true,
-            // Resume capabilities
-            'edit_resume' => true,
-            'read_resume' => true,
-            'delete_resume' => true,
-            'edit_resumes' => true,
-            'publish_resumes' => true,
-            'edit_published_resumes' => true,
-            'delete_published_resumes' => true,
-            // Application capabilities
-            'edit_application' => true,
-            'read_application' => true,
-            'delete_application' => true,
-            'edit_applications' => true,
-            'publish_applications' => true
-        );
-        
-        foreach ($employee_caps as $cap => $grant) {
-            $employee->add_cap($cap, $grant);
-        }
-    } else {
-        error_log('Employee role not found');
-    }
-}
-add_action('init', 'giggajob_add_role_caps');
 
 // Function to check and repair user roles
 function giggajob_check_user_roles() {
@@ -1612,7 +1310,6 @@ function giggajob_job_meta_box_callback($post) {
                     $('#salary_max').closest('div').show();
                 }
             }
-        }
 
         $('#salary_type').on('change', toggleSalaryFields);
         toggleSalaryFields();
@@ -2739,3 +2436,183 @@ function giggajob_debug_email($args) {
     error_log('Headers: ' . print_r($args['headers'], true));
     return $args;
 }
+
+// Update job posting function
+function handle_job_submission() {
+    if (!isset($_POST['job_nonce']) || !wp_verify_nonce($_POST['job_nonce'], 'post_job_nonce')) {
+        wp_die('Security check failed');
+    }
+
+    $post_data = array(
+        'post_title' => sanitize_text_field($_POST['job_title']),
+        'post_content' => wp_kses_post($_POST['job_description']),
+        'post_type' => 'jobs',
+        'post_status' => 'publish'
+    );
+
+    // If editing
+    if (isset($_POST['job_id'])) {
+        $post_data['ID'] = intval($_POST['job_id']);
+        $post_id = wp_update_post($post_data);
+    } else {
+        $post_data['post_author'] = get_current_user_id();
+        $post_id = wp_insert_post($post_data);
+    }
+
+    if (!is_wp_error($post_id)) {
+        // Update meta fields
+        update_post_meta($post_id, 'company_name', sanitize_text_field($_POST['company_name']));
+        update_post_meta($post_id, 'job_location', sanitize_text_field($_POST['job_location']));
+        update_post_meta($post_id, 'remote_option', sanitize_text_field($_POST['remote_option']));
+        update_post_meta($post_id, 'salary_type', sanitize_text_field($_POST['salary_type']));
+        update_post_meta($post_id, 'salary_min', sanitize_text_field($_POST['salary_min']));
+        update_post_meta($post_id, 'salary_max', sanitize_text_field($_POST['salary_max']));
+        update_post_meta($post_id, 'salary_period', sanitize_text_field($_POST['salary_period']));
+        update_post_meta($post_id, 'job_status', 'active');
+
+        // Update taxonomies
+        if (isset($_POST['job_type']) && !empty($_POST['job_type'])) {
+            wp_set_object_terms($post_id, array_map('intval', (array)$_POST['job_type']), 'job_type');
+        }
+        if (isset($_POST['industry']) && !empty($_POST['industry'])) {
+            wp_set_object_terms($post_id, array_map('intval', (array)$_POST['industry']), 'industry');
+        }
+
+        // Handle featured image
+        if (isset($_POST['job_featured_image_id']) && !empty($_POST['job_featured_image_id'])) {
+            set_post_thumbnail($post_id, intval($_POST['job_featured_image_id']));
+        }
+
+        wp_redirect(add_query_arg('tab', 'manage-jobs', home_url('/employer-dashboard/')));
+        exit;
+    }
+
+    wp_die('Error creating/updating job post');
+}
+add_action('admin_post_post_job', 'handle_job_submission');
+add_action('admin_post_nopriv_post_job', 'handle_job_submission');
+
+// Update job search function
+function handle_job_search($query) {
+    if (!is_admin() && $query->is_main_query() && is_post_type_archive('jobs')) {
+        $meta_query = array();
+        $tax_query = array();
+
+        // Add job type filter
+        if (isset($_GET['job_type']) && !empty($_GET['job_type'])) {
+            $tax_query[] = array(
+                'taxonomy' => 'job_type',
+                'field' => 'slug',
+                'terms' => sanitize_text_field($_GET['job_type'])
+            );
+        }
+
+        // Add other filters
+        if (isset($_GET['remote_option']) && !empty($_GET['remote_option'])) {
+            $meta_query[] = array(
+                'key' => 'remote_option',
+                'value' => sanitize_text_field($_GET['remote_option'])
+            );
+        }
+
+        if (!empty($meta_query)) {
+            $query->set('meta_query', $meta_query);
+        }
+        if (!empty($tax_query)) {
+            $query->set('tax_query', $tax_query);
+        }
+    }
+}
+add_action('pre_get_posts', 'handle_job_search');
+
+/**
+ * Migrate job type meta data to taxonomy terms
+ */
+function migrate_job_type_meta_to_taxonomy() {
+    // Get all jobs
+    $jobs = get_posts(array(
+        'post_type' => 'jobs',
+        'posts_per_page' => -1,
+        'post_status' => 'any'
+    ));
+
+    foreach ($jobs as $job) {
+        // Get old job type meta
+        $old_job_type = get_post_meta($job->ID, 'job_type', true);
+        
+        if (!empty($old_job_type)) {
+            // Convert old meta value to term slug
+            $term_slug = sanitize_title($old_job_type);
+            
+            // Get or create the term
+            $term = get_term_by('slug', $term_slug, 'job_type');
+            if (!$term) {
+                // Create term if it doesn't exist
+                $term = wp_insert_term(
+                    ucwords(str_replace('-', ' ', $term_slug)), // Name
+                    'job_type',                                 // Taxonomy
+                    array('slug' => $term_slug)                 // Args
+                );
+            }
+            
+            if (!is_wp_error($term)) {
+                // Get term ID
+                $term_id = is_object($term) ? $term->term_id : $term['term_id'];
+                
+                // Set the taxonomy term
+                wp_set_object_terms($job->ID, array($term_id), 'job_type');
+                
+                // Delete the old meta
+                delete_post_meta($job->ID, 'job_type');
+            }
+        }
+    }
+}
+
+// Add an admin notice to run the migration
+function add_job_type_migration_notice() {
+    if (get_option('job_type_migration_complete') !== 'yes') {
+        ?>
+        <div class="notice notice-warning is-dismissible">
+            <p>
+                Job type data needs to be migrated from meta fields to taxonomy terms. 
+                <a href="<?php echo wp_nonce_url(admin_url('admin-post.php?action=migrate_job_types'), 'migrate_job_types_nonce'); ?>" 
+                   class="button button-primary">
+                    Run Migration
+                </a>
+            </p>
+        </div>
+        <?php
+    }
+}
+add_action('admin_notices', 'add_job_type_migration_notice');
+
+// Handle the migration action
+function handle_job_type_migration() {
+    if (!current_user_can('manage_options')) {
+        wp_die('Unauthorized');
+    }
+
+    if (!wp_verify_nonce($_GET['_wpnonce'], 'migrate_job_types_nonce')) {
+        wp_die('Invalid nonce');
+    }
+
+    migrate_job_type_meta_to_taxonomy();
+    update_option('job_type_migration_complete', 'yes');
+
+    wp_redirect(admin_url('edit.php?post_type=jobs&migration=complete'));
+    exit;
+}
+add_action('admin_post_migrate_job_types', 'handle_job_type_migration');
+
+// Show success message after migration
+function show_migration_success_message() {
+    if (isset($_GET['migration']) && $_GET['migration'] === 'complete') {
+        ?>
+        <div class="notice notice-success is-dismissible">
+            <p>Job type migration completed successfully!</p>
+        </div>
+        <?php
+    }
+}
+add_action('admin_notices', 'show_migration_success_message');

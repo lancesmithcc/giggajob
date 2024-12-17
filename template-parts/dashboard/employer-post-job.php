@@ -65,7 +65,6 @@ if ($job_id) {
             'title' => $job->post_title,
             'description' => $job->post_content,
             'company_name' => get_post_meta($job_id, 'company_name', true),
-            'job_type' => get_post_meta($job_id, 'job_type', true),
             'job_location' => get_post_meta($job_id, 'job_location', true),
             'remote_option' => get_post_meta($job_id, 'remote_option', true),
             'salary' => get_post_meta($job_id, 'salary', true),
@@ -112,21 +111,30 @@ if ($job_id) {
                 <!-- Job Type -->
                 <div class="col-md-6">
                     <label for="job_type" class="form-label">Job Type *</label>
-                    <select class="form-select" id="job_type" name="job_type" required>
+                    <select class="form-select" id="job_type" name="job_type[]" required>
                         <option value="">Select Job Type</option>
                         <?php
-                        $job_types = array(
-                            'full-time' => 'Full Time',
-                            'part-time' => 'Part Time',
-                            'contract' => 'Contract',
-                            'temporary' => 'Temporary',
-                            'internship' => 'Internship'
-                        );
-                        foreach ($job_types as $value => $label):
-                            $selected = $editing && $job_data['job_type'] === $value ? 'selected' : '';
+                        $job_types = get_terms(array(
+                            'taxonomy' => 'job_type',
+                            'hide_empty' => false,
+                        ));
+                        
+                        if (!is_wp_error($job_types) && !empty($job_types)) {
+                            foreach ($job_types as $type) {
+                                $selected = '';
+                                if ($editing) {
+                                    $current_types = wp_get_post_terms($job_id, 'job_type', array('fields' => 'ids'));
+                                    $selected = in_array($type->term_id, $current_types) ? 'selected' : '';
+                                }
+                                printf(
+                                    '<option value="%d" %s>%s</option>',
+                                    $type->term_id,
+                                    $selected,
+                                    esc_html($type->name)
+                                );
+                            }
+                        }
                         ?>
-                            <option value="<?php echo $value; ?>" <?php echo $selected; ?>><?php echo $label; ?></option>
-                        <?php endforeach; ?>
                     </select>
                     <div class="invalid-feedback">Please select a job type.</div>
                 </div>

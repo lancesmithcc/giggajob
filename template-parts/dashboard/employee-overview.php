@@ -176,7 +176,16 @@ if (!empty($resume_skills)) {
                             <p class="mb-1"><?php echo get_post_meta($job->ID, 'company_name', true); ?></p>
                             <small class="text-muted">
                                 <?php echo get_post_meta($job->ID, 'job_location', true); ?> • 
-                                <?php echo get_post_meta($job->ID, 'job_type', true); ?>
+                                <?php 
+                                $job_types = get_the_terms($job->ID, 'job_type');
+                                if ($job_types && !is_wp_error($job_types)) {
+                                    $type_names = array();
+                                    foreach ($job_types as $type) {
+                                        $type_names[] = esc_html($type->name);
+                                    }
+                                    echo implode(', ', $type_names);
+                                }
+                                ?>
                             </small>
                         </div>
                     <?php endforeach; ?>

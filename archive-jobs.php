@@ -21,11 +21,23 @@ get_header();
                     <div class="col-md-3">
                         <select name="job_type" class="form-select">
                             <option value="">All Job Types</option>
-                            <option value="full-time" <?php selected(get_query_var('job_type'), 'full-time'); ?>>Full Time</option>
-                            <option value="part-time" <?php selected(get_query_var('job_type'), 'part-time'); ?>>Part Time</option>
-                            <option value="contract" <?php selected(get_query_var('job_type'), 'contract'); ?>>Contract</option>
-                            <option value="temporary" <?php selected(get_query_var('job_type'), 'temporary'); ?>>Temporary</option>
-                            <option value="internship" <?php selected(get_query_var('job_type'), 'internship'); ?>>Internship</option>
+                            <?php
+                            $job_types = get_terms(array(
+                                'taxonomy' => 'job_type',
+                                'hide_empty' => true
+                            ));
+                            
+                            if (!is_wp_error($job_types) && !empty($job_types)) {
+                                foreach ($job_types as $type) {
+                                    printf(
+                                        '<option value="%s" %s>%s</option>',
+                                        esc_attr($type->slug),
+                                        selected(get_query_var('job_type'), $type->slug, false),
+                                        esc_html($type->name)
+                                    );
+                                }
+                            }
+                            ?>
                         </select>
                     </div>
                     <div class="col-md-3">

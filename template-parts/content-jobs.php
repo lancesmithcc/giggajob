@@ -7,7 +7,6 @@ if (!defined('ABSPATH')) exit;
 
 // Get job meta data
 $company_name = get_post_meta(get_the_ID(), 'company_name', true);
-$job_type = get_post_meta(get_the_ID(), 'job_type', true);
 $job_location = get_post_meta(get_the_ID(), 'job_location', true);
 $remote_option = get_post_meta(get_the_ID(), 'remote_option', true);
 $salary_type = get_post_meta(get_the_ID(), 'salary_type', true);
@@ -17,15 +16,6 @@ $salary_period = get_post_meta(get_the_ID(), 'salary_period', true);
 
 // Set excerpt length
 $excerpt_length = apply_filters('giggajob_job_excerpt_length', 15);
-
-// Job types array
-$job_types = array(
-    'full-time' => 'Full Time',
-    'part-time' => 'Part Time',
-    'contract' => 'Contract',
-    'temporary' => 'Temporary',
-    'internship' => 'Internship'
-);
 
 // Check if we're in a dashboard or archive view
 $is_dashboard = strpos($_SERVER['REQUEST_URI'], 'dashboard') !== false;
@@ -47,9 +37,15 @@ if ($should_show_excerpt): // If we're not on a single job page or we're in dash
             </div>
 
             <div class="job-meta mb-3">
-                <?php if ($job_type && isset($job_types[$job_type])): ?>
-                    <span class="badge bg-primary me-2"><?php echo esc_html($job_types[$job_type]); ?></span>
-                <?php endif; ?>
+                <?php 
+                // Get job types
+                $job_types = get_the_terms(get_the_ID(), 'job_type');
+                if ($job_types && !is_wp_error($job_types)) {
+                    foreach ($job_types as $type) {
+                        echo '<span class="badge bg-primary me-2">' . esc_html($type->name) . '</span>';
+                    }
+                }
+                ?>
                 
                 <?php if ($remote_option === 'yes'): ?>
                     <span class="badge bg-success me-2">Remote</span>
@@ -122,9 +118,15 @@ if ($should_show_excerpt): // If we're not on a single job page or we're in dash
                     </p>
                 <?php endif; ?>
 
-                <?php if ($job_type && isset($job_types[$job_type])): ?>
-                    <span class="badge bg-primary me-2"><?php echo esc_html($job_types[$job_type]); ?></span>
-                <?php endif; ?>
+                <?php 
+                // Get job types
+                $job_types = get_the_terms(get_the_ID(), 'job_type');
+                if ($job_types && !is_wp_error($job_types)) {
+                    foreach ($job_types as $type) {
+                        echo '<span class="badge bg-primary me-2">' . esc_html($type->name) . '</span>';
+                    }
+                }
+                ?>
 
                 <?php if ($remote_option === 'yes'): ?>
                     <span class="badge bg-success me-2">Remote</span>

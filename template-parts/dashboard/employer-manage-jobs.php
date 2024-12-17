@@ -100,14 +100,12 @@ $jobs_query = new WP_Query($args);
                                 <div class="small text-muted">
                                     <?php 
                                     // Show job type and location
-                                    $job_type = get_post_meta(get_the_ID(), 'job_type', true);
-                                    $job_location = get_post_meta(get_the_ID(), 'job_location', true);
-                                    $remote_option = get_post_meta(get_the_ID(), 'remote_option', true);
-                                    
-                                    if ($job_type) echo '<i class="bi bi-briefcase me-1"></i>' . esc_html($job_type);
-                                    if ($job_location) echo ' • <i class="bi bi-geo-alt me-1"></i>' . esc_html($job_location);
-                                    if ($remote_option === 'yes') echo ' • <i class="bi bi-laptop me-1"></i>Remote';
-                                    else if ($remote_option === 'hybrid') echo ' • <i class="bi bi-laptop me-1"></i>Hybrid';
+                                    $job_types = get_the_terms(get_the_ID(), 'job_type');
+                                    if ($job_types && !is_wp_error($job_types)) {
+                                        foreach ($job_types as $type) {
+                                            echo '<i class="bi bi-briefcase me-1"></i>' . esc_html($type->name);
+                                        }
+                                    }
                                     ?>
                                 </div>
                                 <div class="small text-muted mt-1">
