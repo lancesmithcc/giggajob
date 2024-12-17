@@ -262,6 +262,9 @@ function giggajob_login_redirect($redirect_to, $request, $user) {
         // Force refresh user capabilities
         $user->get_role_caps();
         
+        // Set a longer auth cookie expiration (30 days)
+        wp_set_auth_cookie($user->ID, true, true);
+        
         if (in_array('employee', $user->roles)) {
             $url = home_url('/employee-dashboard/');
             error_log('Redirecting employee to dashboard: ' . $url);
@@ -290,9 +293,67 @@ add_action('wp_login', function($user_login, $user) {
     // Force refresh capabilities
     $user->get_role_caps();
     
-    // Set authentication cookie with longer expiration
-    wp_set_auth_cookie($user->ID, true);
+    // Set authentication cookie with longer expiration (30 days)
+    wp_set_auth_cookie($user->ID, true, true);
+    wp_set_current_user($user->ID);
 }, 10, 2);
+
+// Add init hook to check user status and refresh session if needed
+add_action('init', function() {
+    error_log('=== Init Hook Debug ===');
+    error_log('Is user logged in: ' . (is_user_logged_in() ? 'yes' : 'no'));
+    
+    if (is_user_logged_in()) {
+        $user = wp_get_current_user();
+        error_log('Current user ID: ' . $user->ID);
+        error_log('Current user roles: ' . print_r($user->roles, true));
+        error_log('Current user capabilities: ' . print_r($user->allcaps, true));
+        
+        // Refresh auth cookie if it's about to expire
+        $auth_cookie = wp_parse_auth_cookie();
+        if ($auth_cookie) {
+            $expiration = $auth_cookie['expiration'];
+            $current_time = time();
+            
+            // If cookie expires in less than 24 hours, refresh it
+            if (($expiration - $current_time) < (24 * HOUR_IN_SECONDS)) {
+                wp_set_auth_cookie($user->ID, true, true);
+                error_log('Auth cookie refreshed');
+            }
+        }
+    }
+}, 0); // Priority 0 to run early
+
+// Prevent WordPress from clearing auth cookies on browser close
+add_filter('auth_cookie_expiration', function($length, $user_id, $remember) {
+    // Set cookie expiration to 30 days regardless of "remember me"
+    return 30 * DAY_IN_SECONDS;
+}, 10, 3);
+
+// Add session handling
+add_action('init', function() {
+    if (!session_id()) {
+        session_start();
+    }
+}, 1);
+
+// Add cookie settings
+add_action('init', function() {
+    // Set secure cookie settings
+    $secure = is_ssl();
+    $httponly = true;
+    
+    if (!defined('COOKIE_DOMAIN')) {
+        define('COOKIE_DOMAIN', '');
+    }
+    
+    // Set session cookie parameters
+    session_set_cookie_params(30 * DAY_IN_SECONDS, COOKIEPATH, COOKIE_DOMAIN, $secure, $httponly);
+    
+    // Set WordPress cookie settings
+    @ini_set('session.cookie_lifetime', 30 * DAY_IN_SECONDS);
+    @ini_set('session.gc_maxlifetime', 30 * DAY_IN_SECONDS);
+}, 1);
 
 // Add authentication debugging with more detail
 add_filter('authenticate', function($user, $username, $password) {
@@ -2616,3 +2677,173 @@ function show_migration_success_message() {
     }
 }
 add_action('admin_notices', 'show_migration_success_message');
+
+// Handle application withdrawal
+add_action('wp_ajax_handle_application_withdrawal', 'giggajob_handle_application_withdrawal');
+function giggajob_handle_application_withdrawal() {
+    error_log('=== START Application Withdrawal Handler ===');
+    
+    // Verify nonce
+    if (!check_ajax_referer('application_action_nonce', 'nonce', false)) {
+        error_log('Application Withdrawal Handler - Nonce verification failed');
+        wp_send_json_error(array('message' => 'Invalid security token.'));
+        return;
+    }
+
+    $application_id = isset($_POST['application_id']) ? intval($_POST['application_id']) : 0;
+    $current_user_id = get_current_user_id();
+
+    error_log("Processing withdrawal for application ID: $application_id by user: $current_user_id");
+
+    // Verify application exists and belongs to current user
+    $application = get_post($application_id);
+    if (!$application || get_post_meta($application_id, 'applicant_id', true) != $current_user_id) {
+        error_log('Application Withdrawal Handler - Application not found or access denied');
+        wp_send_json_error(array('message' => 'Application not found or access denied.'));
+        return;
+    }
+
+    // Get job and employer information before deleting
+    $job_id = get_post_meta($application_id, 'job_id', true);
+    $job = get_post($job_id);
+    $employer_id = $job->post_author;
+    $employer = get_user_by('ID', $employer_id);
+    
+    error_log("Job ID: $job_id, Employer ID: $employer_id");
+    
+    // Send notification to employer
+    $job_title = get_the_title($job_id);
+    $applicant = get_user_by('ID', $current_user_id);
+    
+    $to = $employer->user_email;
+    $subject = 'Application Withdrawn - ' . $job_title;
+    
+    $message = sprintf(
+        "Hello %s,\n\n" .
+        "This is to inform you that %s has withdrawn their application for the position of '%s'.\n\n" .
+        "Application Details:\n" .
+        "- Job Title: %s\n" .
+        "- Applicant: %s\n" .
+        "- Application Date: %s\n" .
+        "- Withdrawal Date: %s\n\n" .
+        "The application has been removed from your dashboard.\n\n" .
+        "Best regards,\n" .
+        "The GiggaJob Team",
+        $employer->display_name,
+        $applicant->display_name,
+        $job_title,
+        $job_title,
+        $applicant->display_name,
+        get_the_date('', $application_id),
+        current_time('mysql')
+    );
+    
+    $headers = array('Content-Type: text/plain; charset=UTF-8');
+    $email_sent = wp_mail($to, $subject, $message, $headers);
+    
+    error_log("Email notification sent: " . ($email_sent ? 'yes' : 'no'));
+    
+    // Delete the application
+    $deleted = wp_delete_post($application_id, true);
+    error_log("Application deleted: " . ($deleted ? 'yes' : 'no'));
+    
+    error_log('=== END Application Withdrawal Handler ===');
+    
+    if ($deleted) {
+        wp_send_json_success(array('message' => 'Application withdrawn successfully.'));
+    } else {
+        wp_send_json_error(array('message' => 'Failed to withdraw application.'));
+    }
+}
+
+// Handle application actions (including rejection)
+add_action('wp_ajax_handle_application_action', 'giggajob_handle_application_action');
+function giggajob_handle_application_action() {
+    if (!check_ajax_referer('application_action_nonce', 'nonce', false)) {
+        wp_send_json_error(array('message' => 'Invalid security token.'));
+    }
+
+    $application_id = isset($_POST['application_id']) ? intval($_POST['application_id']) : 0;
+    $action = isset($_POST['application_action']) ? sanitize_text_field($_POST['application_action']) : '';
+    $send_notification = isset($_POST['send_notification']) ? (bool)$_POST['send_notification'] : false;
+
+    if (!$application_id || !$action) {
+        wp_send_json_error(array('message' => 'Missing required parameters.'));
+    }
+
+    // Get application details before potential deletion
+    $application = get_post($application_id);
+    $job_id = get_post_meta($application_id, 'job_id', true);
+    $applicant_id = get_post_meta($application_id, 'applicant_id', true);
+    $job = get_post($job_id);
+    $applicant = get_user_by('ID', $applicant_id);
+
+    // Process the action
+    switch ($action) {
+        case 'cancel_interview':
+            update_post_meta($application_id, 'status', 'pending');
+            
+            if ($send_notification && $applicant) {
+                // Send notification to applicant
+                $to = $applicant->user_email;
+                $subject = 'Interview Cancelled - ' . get_the_title($job_id);
+                
+                $message = sprintf(
+                    "Hello %s,\n\n" .
+                    "This is to inform you that the interview for the position of '%s' has been cancelled by the employer.\n\n" .
+                    "Job Details:\n" .
+                    "- Position: %s\n" .
+                    "- Company: %s\n" .
+                    "- Original Interview Date: %s\n" .
+                    "- Original Interview Time: %s\n\n" .
+                    "The employer may reschedule the interview. You will receive a new notification if this happens.\n\n" .
+                    "You can view your application status in your dashboard.\n\n" .
+                    "Best regards,\n" .
+                    "The GiggaJob Team",
+                    $applicant->display_name,
+                    get_the_title($job_id),
+                    get_the_title($job_id),
+                    get_post_meta($job_id, 'company_name', true),
+                    get_post_meta($application_id, 'interview_date', true),
+                    get_post_meta($application_id, 'interview_time', true)
+                );
+                
+                $headers = array('Content-Type: text/plain; charset=UTF-8');
+                wp_mail($to, $subject, $message, $headers);
+            }
+            break;
+            
+        case 'reject':
+            if ($send_notification && $applicant) {
+                // Send rejection notification to applicant
+                $to = $applicant->user_email;
+                $subject = 'Application Status Update - ' . get_the_title($job_id);
+                
+                $message = sprintf(
+                    "Hello %s,\n\n" .
+                    "Thank you for your interest in the position of '%s' at %s.\n\n" .
+                    "After careful consideration, we regret to inform you that we have decided to move forward with other candidates whose qualifications more closely match our current needs.\n\n" .
+                    "We appreciate the time you took to apply and wish you the best in your job search.\n\n" .
+                    "Best regards,\n" .
+                    "%s",
+                    $applicant->display_name,
+                    get_the_title($job_id),
+                    get_post_meta($job_id, 'company_name', true),
+                    get_post_meta($job_id, 'company_name', true)
+                );
+                
+                $headers = array('Content-Type: text/plain; charset=UTF-8');
+                wp_mail($to, $subject, $message, $headers);
+            }
+            
+            // Delete the application
+            $deleted = wp_delete_post($application_id, true);
+            if (!$deleted) {
+                wp_send_json_error(array('message' => 'Failed to process rejection.'));
+                return;
+            }
+            break;
+    }
+
+    wp_send_json_success(array('message' => 'Action processed successfully.'));
+}

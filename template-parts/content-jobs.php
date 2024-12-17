@@ -198,11 +198,8 @@ if ($should_show_excerpt): // If we're not on a single job page or we're in dash
                 <?php else: ?>
                     <!-- Application Form -->
                     <div class="job-apply mt-4">
-                        <button type="button" class="btn btn-primary" id="showApplicationForm">
-                            <i class="bi bi-send me-2"></i>Apply Now
-                        </button>
-                        
-                        <div id="applicationForm" class="application-form mt-4" style="display: none;">
+                        <h3 class="h4 mb-4">Apply for this Position</h3>
+                        <div id="applicationForm" class="application-form">
                             <form id="jobApplicationForm" class="needs-validation" novalidate>
                                 <?php wp_nonce_field('submit_job_application', 'job_application_nonce'); ?>
                                 <input type="hidden" name="job_id" value="<?php echo get_the_ID(); ?>">
@@ -246,9 +243,6 @@ if ($should_show_excerpt): // If we're not on a single job page or we're in dash
                                         <button type="submit" class="btn btn-primary">
                                             <i class="bi bi-send me-2"></i>Submit Application
                                         </button>
-                                        <button type="button" class="btn btn-outline-secondary" id="cancelApplication">
-                                            <i class="bi bi-x-circle me-2"></i>Cancel
-                                        </button>
                                     </div>
                                 <?php endif; ?>
                             </form>
@@ -257,18 +251,6 @@ if ($should_show_excerpt): // If we're not on a single job page or we're in dash
 
                     <script>
                     jQuery(document).ready(function($) {
-                        // Show/Hide application form
-                        $('#showApplicationForm').click(function() {
-                            $(this).hide();
-                            $('#applicationForm').slideDown();
-                        });
-
-                        $('#cancelApplication').click(function() {
-                            $('#applicationForm').slideUp(function() {
-                                $('#showApplicationForm').show();
-                            });
-                        });
-
                         // Handle form submission
                         $('#jobApplicationForm').submit(function(e) {
                             e.preventDefault();

@@ -70,13 +70,76 @@ $applications_query = new WP_Query($args);
                             </td>
                             <td><?php echo get_the_date(); ?></td>
                             <td>
-                                <a href="<?php echo get_permalink($job_id); ?>" 
-                                   class="btn btn-sm btn-outline-primary" 
-                                   title="View Job">
-                                    <i class="bi bi-eye"></i>
-                                </a>
+                                <div class="btn-group">
+                                    <a href="<?php echo get_permalink($job_id); ?>" 
+                                       class="btn btn-sm btn-outline-primary" 
+                                       title="View Job">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    <?php if ($status === 'pending' || $status === 'interview_scheduled'): ?>
+                                        <button type="button" 
+                                                class="btn btn-sm btn-outline-danger withdraw-application-btn" 
+                                                data-application-id="<?php echo get_the_ID(); ?>"
+                                                title="Withdraw Application">
+                                            <i class="bi bi-x-circle"></i>
+                                        </button>
+                                    <?php endif; ?>
+                                    <?php if ($status === 'interview_scheduled'): 
+                                        $interview_date = get_post_meta(get_the_ID(), 'interview_date', true);
+                                        $interview_time = get_post_meta(get_the_ID(), 'interview_time', true);
+                                        $interview_location = get_post_meta(get_the_ID(), 'interview_location', true);
+                                        $interview_message = get_post_meta(get_the_ID(), 'interview_message', true);
+                                    ?>
+                                        <button type="button" 
+                                                class="btn btn-sm btn-outline-info toggle-interview-details" 
+                                                data-application-id="<?php echo get_the_ID(); ?>"
+                                                title="View Interview Details">
+                                            <i class="bi bi-calendar-check"></i>
+                                        </button>
+                                    <?php endif; ?>
+                                </div>
                             </td>
                         </tr>
+                        <?php if ($status === 'interview_scheduled'): ?>
+                        <tr class="interview-details-row bg-dark d-none" id="interview-details-<?php echo get_the_ID(); ?>">
+                            <td colspan="5">
+                                <div class="p-3 border border-secondary rounded">
+                                    <div class="row">
+                                        <div class="col-md-4">
+                                            <div class="mb-2">
+                                                <i class="bi bi-calendar text-light me-2"></i>
+                                                <span class="text-light">Date:</span>
+                                                <span class="text-[#ccc]"><?php echo date('M j, Y', strtotime($interview_date)); ?></span>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="mb-2">
+                                                <i class="bi bi-clock text-light me-2"></i>
+                                                <span class="text-light">Time:</span>
+                                                <span class="text-[#ccc]"><?php echo date('g:i A', strtotime($interview_time)); ?></span>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="mb-2">
+                                                <i class="bi bi-geo-alt text-light me-2"></i>
+                                                <span class="text-light">Location:</span>
+                                                <span class="text-[#ccc]"><?php echo esc_html($interview_location); ?></span>
+                                            </div>
+                                        </div>
+                                        <?php if (!empty($interview_message)): ?>
+                                        <div class="col-12 mt-2">
+                                            <div class="mb-2">
+                                                <i class="bi bi-chat-text text-light me-2"></i>
+                                                <span class="text-light">Message:</span>
+                                                <div class="text-[#ccc] mt-1"><?php echo nl2br(esc_html($interview_message)); ?></div>
+                                            </div>
+                                        </div>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        <?php endif; ?>
                     <?php endwhile; ?>
                 </tbody>
             </table>
@@ -109,3 +172,55 @@ $applications_query = new WP_Query($args);
     wp_reset_postdata();
     ?>
 </div> 
+
+<script>
+jQuery(document).ready(function($) {
+    // Create nonce for application actions
+    var applicationNonce = '<?php echo wp_create_nonce('application_action_nonce'); ?>';
+
+    // Toggle interview details
+    $('.toggle-interview-details').click(function() {
+        var applicationId = $(this).data('application-id');
+        $('#interview-details-' + applicationId).toggleClass('d-none');
+    });
+
+    // Handle withdraw application
+    $('.withdraw-application-btn').click(function() {
+        var applicationId = $(this).data('application-id');
+        var $btn = $(this);
+        var $row = $btn.closest('tr');
+
+        if (!confirm('Are you sure you want to withdraw this application? This action cannot be undone.')) {
+            return;
+        }
+
+        $.ajax({
+            url: giggajob_ajax.ajax_url,
+            type: 'POST',
+            data: {
+                action: 'handle_application_withdrawal',
+                application_id: applicationId,
+                nonce: applicationNonce
+            },
+            beforeSend: function() {
+                $btn.prop('disabled', true).html(
+                    '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>'
+                );
+            },
+            success: function(response) {
+                if (response.success) {
+                    location.reload();
+                } else {
+                    alert(response.data.message || 'Failed to withdraw application. Please try again.');
+                }
+            },
+            error: function() {
+                alert('An error occurred while processing your request. Please try again.');
+            },
+            complete: function() {
+                $btn.prop('disabled', false).html('<i class="bi bi-x-circle"></i>');
+            }
+        });
+    });
+});
+</script> 

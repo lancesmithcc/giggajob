@@ -454,7 +454,11 @@ jQuery(document).ready(function($) {
         var action = $(this).data('action');
         var applicationId = $(this).data('application-id');
         
-        if (!confirm('Are you sure you want to ' + (action === 'reject' ? 'reject this application?' : 'cancel this interview?'))) {
+        var confirmMessage = action === 'reject' ? 
+            'Are you sure you want to reject this application?' : 
+            'Are you sure you want to cancel this interview? The candidate will be notified.';
+            
+        if (!confirm(confirmMessage)) {
             return;
         }
         
@@ -468,7 +472,8 @@ jQuery(document).ready(function($) {
                 action: 'handle_application_action',
                 application_action: action,
                 application_id: applicationId,
-                nonce: applicationNonce
+                nonce: applicationNonce,
+                send_notification: true
             },
             beforeSend: function() {
                 $btn.prop('disabled', true).html(
@@ -477,14 +482,7 @@ jQuery(document).ready(function($) {
             },
             success: function(response) {
                 if (response.success) {
-                    // Fade out and remove the row
-                    $row.fadeOut(400, function() {
-                        $(this).remove();
-                        // If no more rows, show the "No Applications" message
-                        if ($('tbody tr:visible').length === 0) {
-                            location.reload();
-                        }
-                    });
+                    location.reload();
                 } else {
                     alert(response.data.message || 'Failed to process the request. Please try again.');
                 }
