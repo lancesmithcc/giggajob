@@ -249,8 +249,18 @@ function giggajob_register_post_types() {
         'menu_icon' => 'dashicons-businessman',
         'supports' => array('title', 'editor', 'thumbnail', 'custom-fields'),
         'rewrite' => array('slug' => 'jobs'),
-        'capability_type' => 'post',
+        'capability_type' => 'job',
         'map_meta_cap' => true,
+        'capabilities' => array(
+            'edit_post' => 'edit_job',
+            'read_post' => 'read_job',
+            'delete_post' => 'delete_job',
+            'edit_posts' => 'edit_jobs',
+            'edit_others_posts' => 'edit_others_jobs',
+            'publish_posts' => 'publish_jobs',
+            'read_private_posts' => 'read_private_jobs',
+            'delete_posts' => 'delete_jobs'
+        ),
         'taxonomies' => array('industry')
     ));
 
@@ -268,8 +278,18 @@ function giggajob_register_post_types() {
         'show_in_menu' => true,
         'menu_icon' => 'dashicons-portfolio',
         'supports' => array('title', 'custom-fields'),
-        'capability_type' => 'post',
+        'capability_type' => 'application',
         'map_meta_cap' => true,
+        'capabilities' => array(
+            'edit_post' => 'edit_application',
+            'read_post' => 'read_application',
+            'delete_post' => 'delete_application',
+            'edit_posts' => 'edit_applications',
+            'edit_others_posts' => 'edit_others_applications',
+            'publish_posts' => 'publish_applications',
+            'read_private_posts' => 'read_private_applications',
+            'delete_posts' => 'delete_applications'
+        )
     ));
 
     // Resume Post Type
@@ -287,8 +307,18 @@ function giggajob_register_post_types() {
         'menu_icon' => 'dashicons-id',
         'supports' => array('title', 'editor', 'thumbnail', 'custom-fields'),
         'rewrite' => array('slug' => 'resumes'),
-        'capability_type' => 'post',
+        'capability_type' => 'resume',
         'map_meta_cap' => true,
+        'capabilities' => array(
+            'edit_post' => 'edit_resume',
+            'read_post' => 'read_resume',
+            'delete_post' => 'delete_resume',
+            'edit_posts' => 'edit_resumes',
+            'edit_others_posts' => 'edit_others_resumes',
+            'publish_posts' => 'publish_resumes',
+            'read_private_posts' => 'read_private_resumes',
+            'delete_posts' => 'delete_resumes'
+        )
     ));
 
     // Employer Profile Post Type
@@ -306,36 +336,210 @@ function giggajob_register_post_types() {
         'menu_icon' => 'dashicons-building',
         'supports' => array('title', 'editor', 'thumbnail', 'custom-fields'),
         'rewrite' => array('slug' => 'employer-profiles'),
-        'capability_type' => 'post',
+        'capability_type' => 'employer_profile',
         'map_meta_cap' => true,
-        'taxonomies' => array('industry') // Add industry taxonomy to employer profiles
+        'capabilities' => array(
+            'edit_post' => 'edit_employer_profile',
+            'read_post' => 'read_employer_profile',
+            'delete_post' => 'delete_employer_profile',
+            'edit_posts' => 'edit_employer_profiles',
+            'edit_others_posts' => 'edit_others_employer_profiles',
+            'publish_posts' => 'publish_employer_profiles',
+            'read_private_posts' => 'read_private_employer_profiles',
+            'delete_posts' => 'delete_employer_profiles'
+        ),
+        'taxonomies' => array('industry')
     ));
 }
 add_action('init', 'giggajob_register_post_types');
 
+// Create custom user roles on theme activation
+function giggajob_create_user_roles() {
+    error_log('=== Creating Custom User Roles ===');
+    
+    // Remove roles first to ensure clean setup
+    remove_role('employee');
+    remove_role('employer');
+    
+    // Add the employee role
+    $employee = add_role('employee', 'Employee', array(
+        'read' => true,
+        'upload_files' => true,
+        // Resume capabilities
+        'edit_resume' => true,
+        'read_resume' => true,
+        'delete_resume' => true,
+        'edit_resumes' => true,
+        'publish_resumes' => true,
+        'edit_published_resumes' => true,
+        'delete_published_resumes' => true,
+        // Application capabilities
+        'edit_application' => true,
+        'read_application' => true,
+        'delete_application' => true,
+        'edit_applications' => true,
+        'publish_applications' => true
+    ));
+    
+    if (is_null($employee)) {
+        error_log('Failed to create employee role');
+    } else {
+        error_log('Employee role created successfully');
+    }
+
+    // Add the employer role
+    $employer = add_role('employer', 'Employer', array(
+        'read' => true,
+        'upload_files' => true,
+        // Job capabilities
+        'edit_job' => true,
+        'read_job' => true,
+        'delete_job' => true,
+        'edit_jobs' => true,
+        'publish_jobs' => true,
+        'edit_published_jobs' => true,
+        'delete_published_jobs' => true,
+        // Employer profile capabilities
+        'edit_employer_profile' => true,
+        'read_employer_profile' => true,
+        'delete_employer_profile' => true,
+        'edit_employer_profiles' => true,
+        'publish_employer_profiles' => true,
+        // Application capabilities
+        'edit_application' => true,
+        'read_application' => true,
+        'delete_application' => true,
+        'edit_applications' => true,
+        'publish_applications' => true
+    ));
+    
+    if (is_null($employer)) {
+        error_log('Failed to create employer role');
+    } else {
+        error_log('Employer role created successfully');
+    }
+}
+
+// Hook into theme activation and switch
+add_action('after_switch_theme', 'giggajob_create_user_roles');
+add_action('after_setup_theme', 'giggajob_create_user_roles');
+
 // Add custom capabilities to roles
 function giggajob_add_role_caps() {
+    error_log('=== Adding Role Capabilities ===');
+    
     // Get the employer role
     $employer = get_role('employer');
     if ($employer) {
-        $employer->add_cap('read');
-        $employer->add_cap('edit_jobs');
-        $employer->add_cap('publish_jobs');
-        $employer->add_cap('edit_published_jobs');
-        $employer->add_cap('delete_published_jobs');
+        error_log('Adding employer capabilities');
+        $employer_caps = array(
+            'read' => true,
+            'upload_files' => true,
+            // Job capabilities
+            'edit_job' => true,
+            'read_job' => true,
+            'delete_job' => true,
+            'edit_jobs' => true,
+            'publish_jobs' => true,
+            'edit_published_jobs' => true,
+            'delete_published_jobs' => true,
+            // Employer profile capabilities
+            'edit_employer_profile' => true,
+            'read_employer_profile' => true,
+            'delete_employer_profile' => true,
+            'edit_employer_profiles' => true,
+            'publish_employer_profiles' => true,
+            // Application capabilities
+            'edit_application' => true,
+            'read_application' => true,
+            'delete_application' => true,
+            'edit_applications' => true,
+            'publish_applications' => true
+        );
+        
+        foreach ($employer_caps as $cap => $grant) {
+            $employer->add_cap($cap, $grant);
+        }
+    } else {
+        error_log('Employer role not found');
     }
 
     // Get the employee role
     $employee = get_role('employee');
     if ($employee) {
-        $employee->add_cap('read');
-        $employee->add_cap('edit_resume');
-        $employee->add_cap('publish_resume');
-        $employee->add_cap('edit_published_resume');
-        $employee->add_cap('delete_published_resume');
+        error_log('Adding employee capabilities');
+        $employee_caps = array(
+            'read' => true,
+            'upload_files' => true,
+            // Resume capabilities
+            'edit_resume' => true,
+            'read_resume' => true,
+            'delete_resume' => true,
+            'edit_resumes' => true,
+            'publish_resumes' => true,
+            'edit_published_resumes' => true,
+            'delete_published_resumes' => true,
+            // Application capabilities
+            'edit_application' => true,
+            'read_application' => true,
+            'delete_application' => true,
+            'edit_applications' => true,
+            'publish_applications' => true
+        );
+        
+        foreach ($employee_caps as $cap => $grant) {
+            $employee->add_cap($cap, $grant);
+        }
+    } else {
+        error_log('Employee role not found');
     }
 }
 add_action('init', 'giggajob_add_role_caps');
+
+// Function to check and repair user roles
+function giggajob_check_user_roles() {
+    error_log('=== Checking User Roles ===');
+    
+    // Get all users with employee or employer role
+    $users = get_users(array(
+        'role__in' => array('employee', 'employer')
+    ));
+    
+    foreach ($users as $user) {
+        error_log('Checking user: ' . $user->ID);
+        error_log('Current roles: ' . print_r($user->roles, true));
+        
+        // Ensure roles have proper capabilities
+        if (in_array('employer', $user->roles)) {
+            $employer_caps = array(
+                'read', 'upload_files',
+                'edit_job', 'read_job', 'delete_job', 'edit_jobs', 'publish_jobs',
+                'edit_published_jobs', 'delete_published_jobs',
+                'edit_employer_profile', 'read_employer_profile', 'delete_employer_profile',
+                'edit_employer_profiles', 'publish_employer_profiles',
+                'edit_application', 'read_application', 'delete_application',
+                'edit_applications', 'publish_applications'
+            );
+            foreach ($employer_caps as $cap) {
+                $user->add_cap($cap);
+            }
+        }
+        
+        if (in_array('employee', $user->roles)) {
+            $employee_caps = array(
+                'read', 'upload_files',
+                'edit_resume', 'read_resume', 'delete_resume', 'edit_resumes',
+                'publish_resumes', 'edit_published_resumes', 'delete_published_resumes',
+                'edit_application', 'read_application', 'delete_application',
+                'edit_applications', 'publish_applications'
+            );
+            foreach ($employee_caps as $cap) {
+                $user->add_cap($cap);
+            }
+        }
+    }
+}
+add_action('init', 'giggajob_check_user_roles');
 
 // Restrict Admin Access
 function giggajob_restrict_admin_access() {
@@ -347,18 +551,80 @@ function giggajob_restrict_admin_access() {
 }
 add_action('init', 'giggajob_restrict_admin_access');
 
-// Redirect users to their respective dashboards after login
+// Modify the login redirect function to be more robust
 function giggajob_login_redirect($redirect_to, $request, $user) {
-    if (isset($user->roles) && is_array($user->roles)) {
+    error_log('=== Login Redirect Debug ===');
+    error_log('Original redirect_to: ' . $redirect_to);
+    error_log('Request: ' . $request);
+    
+    if (!is_wp_error($user) && $user instanceof WP_User) {
+        error_log('User ID: ' . $user->ID);
+        error_log('User roles: ' . print_r($user->roles, true));
+        
+        // Force refresh user capabilities
+        $user->get_role_caps();
+        
         if (in_array('employee', $user->roles)) {
-            return home_url('/employee-dashboard');
+            $url = home_url('/employee-dashboard/');
+            error_log('Redirecting employee to dashboard: ' . $url);
+            return $url;
         } elseif (in_array('employer', $user->roles)) {
-            return home_url('/employer-dashboard');
+            $url = home_url('/employer-dashboard/');
+            error_log('Redirecting employer to dashboard: ' . $url);
+            return $url;
         }
+    } else {
+        error_log('Invalid user object or WP_Error');
     }
+    
+    error_log('Using default redirect');
     return $redirect_to;
 }
 add_filter('login_redirect', 'giggajob_login_redirect', 10, 3);
+
+// Add authentication success action
+add_action('wp_login', function($user_login, $user) {
+    error_log('=== Login Success ===');
+    error_log('User logged in: ' . $user_login);
+    error_log('User ID: ' . $user->ID);
+    error_log('User roles: ' . print_r($user->roles, true));
+    
+    // Force refresh capabilities
+    $user->get_role_caps();
+    
+    // Set authentication cookie with longer expiration
+    wp_set_auth_cookie($user->ID, true);
+}, 10, 2);
+
+// Add authentication debugging with more detail
+add_filter('authenticate', function($user, $username, $password) {
+    error_log('=== Authentication Debug ===');
+    error_log('Username attempting login: ' . $username);
+    
+    if (is_wp_error($user)) {
+        error_log('Authentication error: ' . $user->get_error_message());
+    } else if ($user instanceof WP_User) {
+        error_log('User authenticated successfully');
+        error_log('User ID: ' . $user->ID);
+        error_log('User roles: ' . print_r($user->roles, true));
+        error_log('User capabilities: ' . print_r($user->allcaps, true));
+    }
+    
+    return $user;
+}, 30, 3);
+
+// Add init hook to check user status with more detail
+add_action('init', function() {
+    error_log('=== Init Hook Debug ===');
+    error_log('Is user logged in: ' . (is_user_logged_in() ? 'yes' : 'no'));
+    
+    if (is_user_logged_in()) {
+        $user = wp_get_current_user();
+        error_log('Current user ID: ' . $user->ID);
+        error_log('Current user roles: ' . print_r($user->roles, true));
+        error_log('Current user capabilities: ' . print_r($user->allcaps, true));
+    }
+});
 
 // Enqueue scripts and styles
 function giggajob_enqueue_scripts() {
@@ -1387,16 +1653,22 @@ add_action('save_post_jobs', 'giggajob_save_job_meta_box');
  * Handle application actions (reject, cancel interview)
  */
 function handle_application_action() {
-    // Verify nonce
-    if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'application_action_nonce')) {
+    error_log('=== START Application Action Handler ===');
+    
+    // Check nonce and user
+    if (!check_ajax_referer('application_action_nonce', 'nonce', false)) {
         wp_send_json_error(array('message' => 'Security check failed'));
         return;
     }
 
-    // Get current user
+    if (!is_user_logged_in()) {
+        wp_send_json_error(array('message' => 'Permission denied'));
+        return;
+    }
+
     $current_user = wp_get_current_user();
-    if (!$current_user->ID) {
-        wp_send_json_error(array('message' => 'User not logged in'));
+    if (!in_array('employer', $current_user->roles)) {
+        wp_send_json_error(array('message' => 'Permission denied'));
         return;
     }
 
@@ -1424,10 +1696,13 @@ function handle_application_action() {
         return;
     }
 
+    error_log("Processing application action: $action for application: $application_id");
+
     // Process the action
     switch ($action) {
         case 'reject':
             update_post_meta($application_id, 'status', 'rejected');
+            // This will trigger the status change notification
             break;
         case 'cancel_interview':
             update_post_meta($application_id, 'status', 'pending');
@@ -1435,9 +1710,11 @@ function handle_application_action() {
             delete_post_meta($application_id, 'interview_time');
             delete_post_meta($application_id, 'interview_location');
             delete_post_meta($application_id, 'interview_message');
+            // This will trigger the status change notification
             break;
     }
 
+    error_log('=== END Application Action Handler ===');
     wp_send_json_success(array('message' => 'Action completed successfully'));
 }
 add_action('wp_ajax_handle_application_action', 'handle_application_action');
@@ -1445,6 +1722,8 @@ add_action('wp_ajax_handle_application_action', 'handle_application_action');
 // Handle Interview Scheduling
 add_action('wp_ajax_handle_interview_schedule', 'giggajob_handle_interview_schedule');
 function giggajob_handle_interview_schedule() {
+    error_log('=== START Interview Schedule Handler ===');
+    
     // Debug output
     error_log('Interview Schedule Handler - POST data: ' . print_r($_POST, true));
     error_log('Interview Schedule Handler - Nonce: ' . (isset($_POST['nonce']) ? $_POST['nonce'] : 'not set'));
@@ -1505,7 +1784,11 @@ function giggajob_handle_interview_schedule() {
         update_post_meta($application_id, 'interview_message', sanitize_textarea_field($_POST['interview_message']));
     }
 
-    error_log('Interview Schedule Handler - Successfully scheduled interview for application: ' . $application_id);
+    error_log('Interview details saved, triggering notification...');
+    
+    // This will trigger the meta update hook which sends the email
+    error_log('=== END Interview Schedule Handler ===');
+    
     wp_send_json_success(array('message' => 'Interview scheduled successfully.'));
 }
 
@@ -1700,50 +1983,43 @@ function giggajob_handle_job_application() {
     update_post_meta($application_id, 'resume_id', $resume_id);
     update_post_meta($application_id, 'status', 'pending');
     update_post_meta($application_id, 'application_date', current_time('mysql'));
+    update_post_meta($application_id, 'applicant_id', get_current_user_id());
 
-    // Send notification to employer
-    $employer_id = $job->post_author;
-    // TODO: Add notification system
+    error_log("Job application created successfully - ID: $application_id");
+
+    // Send notification to employer directly
+    giggajob_send_application_notification($application_id);
 
     wp_send_json_success(['message' => 'Application submitted successfully!']);
 }
 
 // Handle User Registration
-add_action('wp_ajax_nopriv_register_user', 'giggajob_handle_user_registration');
-add_action('wp_ajax_register_user', 'giggajob_handle_user_registration');
-function giggajob_handle_user_registration() {
-    // Parse form data
-    parse_str($_POST['form_data'], $form_data);
-
-    // Get and validate role
-    $role = isset($form_data['role']) ? sanitize_text_field($form_data['role']) : '';
-    if (!in_array($role, ['employee', 'employer'])) {
-        wp_send_json_error(array('message' => 'Invalid user role.'));
-    }
-
-    // Verify nonce
-    $nonce_action = $role === 'employer' ? 'employer_registration' : 'employee_registration';
-    if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], $nonce_action)) {
+add_action('wp_ajax_nopriv_register_user', 'giggajob_register_user');
+add_action('wp_ajax_register_user', 'giggajob_register_user');
+function giggajob_register_user() {
+    // Check nonce
+    if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'employee_registration_nonce')) {
         wp_send_json_error(array('message' => 'Security check failed.'));
     }
 
-    // Validate required fields
-    $required_fields = array(
-        'username' => 'Username',
-        'email' => 'Email',
-        'password' => 'Password',
-        'confirm_password' => 'Confirm Password',
-        'first_name' => 'First Name',
-        'last_name' => 'Last Name'
-    );
-
-    if ($role === 'employer') {
-        $required_fields['company_name'] = 'Company Name';
+    // Parse form data
+    parse_str($_POST['form_data'], $form_data);
+    
+    // Determine role
+    $role = isset($form_data['role']) ? $form_data['role'] : 'employee';
+    if (!in_array($role, array('employee', 'employer'))) {
+        wp_send_json_error(array('message' => 'Invalid role specified.'));
     }
 
-    foreach ($required_fields as $field => $label) {
+    // Validate required fields
+    $required_fields = array('username', 'email', 'password', 'confirm_password', 'first_name', 'last_name');
+    if ($role === 'employer') {
+        $required_fields[] = 'company_name';
+    }
+
+    foreach ($required_fields as $field) {
         if (empty($form_data[$field])) {
-            wp_send_json_error(array('message' => $label . ' is required.'));
+            wp_send_json_error(array('message' => ucfirst(str_replace('_', ' ', $field)) . ' is required.'));
         }
     }
 
@@ -1752,12 +2028,12 @@ function giggajob_handle_user_registration() {
         wp_send_json_error(array('message' => 'Please enter a valid email address.'));
     }
 
-    // Check if email already exists
+    // Check if email exists
     if (email_exists($form_data['email'])) {
         wp_send_json_error(array('message' => 'This email address is already registered.'));
     }
 
-    // Check if username already exists
+    // Check if username exists
     if (username_exists($form_data['username'])) {
         wp_send_json_error(array('message' => 'This username is already taken.'));
     }
@@ -1811,62 +2087,570 @@ function giggajob_handle_user_registration() {
     wp_set_current_user($user_id);
     wp_set_auth_cookie($user_id);
 
-    // Send welcome email
-    $to = $form_data['email'];
-    $subject = 'Welcome to ' . get_bloginfo('name');
-    $message = sprintf(
-        "Welcome to %s!\n\n" .
-        "Your account has been created successfully.\n\n" .
-        "Username: %s\n" .
-        "Role: %s\n\n" .
-        "You can log in at: %s\n\n" .
-        "Best regards,\n" .
-        "%s Team",
-        get_bloginfo('name'),
-        $form_data['username'],
-        ucfirst($role),
-        wp_login_url(),
-        get_bloginfo('name')
-    );
-    $headers = array('Content-Type: text/plain; charset=UTF-8');
-    wp_mail($to, $subject, $message, $headers);
+    // Welcome email will be sent by the giggajob_send_welcome_email function hooked to 'user_register'
 
-    // Return success response with redirect URL
-    $redirect_url = $role === 'employer' ? home_url('/employer-dashboard') : home_url('/employee-dashboard');
+    // Return success
     wp_send_json_success(array(
         'message' => 'Registration successful!',
-        'redirect_url' => $redirect_url
+        'redirect_url' => home_url($role === 'employer' ? '/employer-dashboard/' : '/employee-dashboard/')
     ));
 }
 
-// Create custom user roles on theme activation
-function giggajob_create_user_roles() {
-    // Add the employee role if it doesn't exist
-    if (!get_role('employee')) {
-        add_role('employee', 'Employee', array(
-            'read' => true,
-            'edit_posts' => false,
-            'delete_posts' => false,
-            'upload_files' => true,
-            'edit_resume' => true,
-            'publish_resume' => true,
-            'edit_published_resume' => true,
-            'delete_published_resume' => true
-        ));
+// Add Email Templates Settings Page
+add_action('admin_menu', 'giggajob_add_email_templates_page');
+function giggajob_add_email_templates_page() {
+    add_menu_page(
+        'Email Templates',
+        'Email Templates',
+        'manage_options',
+        'giggajob-email-templates',
+        'giggajob_email_templates_page',
+        'dashicons-email',
+        30
+    );
+}
+
+function giggajob_email_templates_page() {
+    // Check user capabilities
+    if (!current_user_can('manage_options')) {
+        return;
     }
 
-    // Add the employer role if it doesn't exist
-    if (!get_role('employer')) {
-        add_role('employer', 'Employer', array(
-            'read' => true,
-            'edit_posts' => false,
-            'delete_posts' => false,
-            'upload_files' => true,
-            'edit_jobs' => true,
-            'publish_jobs' => true,
-            'edit_published_jobs' => true,
-            'delete_published_jobs' => true
-        ));
+    // Save settings if form is submitted
+    if (isset($_POST['giggajob_email_templates_nonce']) && 
+        wp_verify_nonce($_POST['giggajob_email_templates_nonce'], 'giggajob_save_email_templates')) {
+        
+        $templates = array(
+            'new_application' => array(
+                'subject' => sanitize_text_field($_POST['new_application_subject']),
+                'body' => wp_kses_post($_POST['new_application_body'])
+            ),
+            'interview_scheduled' => array(
+                'subject' => sanitize_text_field($_POST['interview_scheduled_subject']),
+                'body' => wp_kses_post($_POST['interview_scheduled_body'])
+            ),
+            'application_status' => array(
+                'subject' => sanitize_text_field($_POST['application_status_subject']),
+                'body' => wp_kses_post($_POST['application_status_body'])
+            ),
+            'welcome_employee' => array(
+                'subject' => sanitize_text_field($_POST['welcome_employee_subject']),
+                'body' => wp_kses_post($_POST['welcome_employee_body'])
+            ),
+            'welcome_employer' => array(
+                'subject' => sanitize_text_field($_POST['welcome_employer_subject']),
+                'body' => wp_kses_post($_POST['welcome_employer_body'])
+            )
+        );
+
+        update_option('giggajob_email_templates', $templates);
+        echo '<div class="notice notice-success"><p>Email templates saved successfully!</p></div>';
+    }
+
+    // Get current templates
+    $templates = get_option('giggajob_email_templates', array(
+        'new_application' => array(
+            'subject' => 'New Job Application Received: {job_title}',
+            'body' => "Dear {employer_name},\n\nA new application has been received for your job posting: {job_title}\n\nCandidate: {applicant_name}\nEmail: {applicant_email}\n\nYou can view the full application in your dashboard: {application_url}\n\nBest regards,\n{site_name}"
+        ),
+        'interview_scheduled' => array(
+            'subject' => 'Interview Scheduled: {job_title}',
+            'body' => "Dear {applicant_name},\n\nAn interview has been scheduled for your application to {job_title} at {company_name}.\n\nDate: {interview_date}\nTime: {interview_time}\nLocation: {interview_location}\n\n{interview_message}\n\nBest regards,\n{company_name}"
+        ),
+        'application_status' => array(
+            'subject' => 'Application Status Update: {job_title}',
+            'body' => "Dear {applicant_name},\n\nThere has been an update to your application for {job_title} at {company_name}.\n\nStatus: {status}\n\nYou can view the details in your dashboard: {application_url}\n\nBest regards,\n{company_name}"
+        ),
+        'welcome_employee' => array(
+            'subject' => 'Welcome to {site_name}!',
+            'body' => "Welcome to {site_name}!\n\nYour job seeker account has been created successfully.\n\nUsername: {username}\n\nYou can log in at: {login_url}\n\nBest regards,\n{site_name} Team"
+        ),
+        'welcome_employer' => array(
+            'subject' => 'Welcome to {site_name}!',
+            'body' => "Welcome to {site_name}!\n\nYour employer account has been created successfully.\n\nUsername: {username}\nCompany: {company_name}\n\nYou can log in at: {login_url}\n\nBest regards,\n{site_name} Team"
+        )
+    ));
+    ?>
+    <div class="wrap">
+        <h1>Email Templates</h1>
+        <form method="post" action="">
+            <?php wp_nonce_field('giggajob_save_email_templates', 'giggajob_email_templates_nonce'); ?>
+            
+            <div class="email-templates-container">
+                <!-- New Application Template -->
+                <h2>New Application Email (To Employer)</h2>
+                <table class="form-table">
+                    <tr>
+                        <th scope="row">Subject</th>
+                        <td>
+                            <input type="text" name="new_application_subject" class="large-text" 
+                                   value="<?php echo esc_attr($templates['new_application']['subject']); ?>">
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row">Body</th>
+                        <td>
+                            <textarea name="new_application_body" rows="10" class="large-text"><?php 
+                                echo esc_textarea($templates['new_application']['body']); 
+                            ?></textarea>
+                            <p class="description">
+                                Available variables: {employer_name}, {job_title}, {applicant_name}, 
+                                {applicant_email}, {application_url}, {site_name}
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+
+                <!-- Interview Scheduled Template -->
+                <h2>Interview Scheduled Email (To Applicant)</h2>
+                <table class="form-table">
+                    <tr>
+                        <th scope="row">Subject</th>
+                        <td>
+                            <input type="text" name="interview_scheduled_subject" class="large-text" 
+                                   value="<?php echo esc_attr($templates['interview_scheduled']['subject']); ?>">
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row">Body</th>
+                        <td>
+                            <textarea name="interview_scheduled_body" rows="10" class="large-text"><?php 
+                                echo esc_textarea($templates['interview_scheduled']['body']); 
+                            ?></textarea>
+                            <p class="description">
+                                Available variables: {applicant_name}, {job_title}, {company_name}, 
+                                {interview_date}, {interview_time}, {interview_location}, {interview_message}
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+
+                <!-- Application Status Template -->
+                <h2>Application Status Update Email (To Applicant)</h2>
+                <table class="form-table">
+                    <tr>
+                        <th scope="row">Subject</th>
+                        <td>
+                            <input type="text" name="application_status_subject" class="large-text" 
+                                   value="<?php echo esc_attr($templates['application_status']['subject']); ?>">
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row">Body</th>
+                        <td>
+                            <textarea name="application_status_body" rows="10" class="large-text"><?php 
+                                echo esc_textarea($templates['application_status']['body']); 
+                            ?></textarea>
+                            <p class="description">
+                                Available variables: {applicant_name}, {job_title}, {company_name}, 
+                                {status}, {application_url}
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+
+                <!-- Welcome Employee Template -->
+                <h2>Welcome Email (To New Employee)</h2>
+                <table class="form-table">
+                    <tr>
+                        <th scope="row">Subject</th>
+                        <td>
+                            <input type="text" name="welcome_employee_subject" class="large-text" 
+                                   value="<?php echo esc_attr($templates['welcome_employee']['subject']); ?>">
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row">Body</th>
+                        <td>
+                            <textarea name="welcome_employee_body" rows="10" class="large-text"><?php 
+                                echo esc_textarea($templates['welcome_employee']['body']); 
+                            ?></textarea>
+                            <p class="description">
+                                Available variables: {username}, {site_name}, {login_url}
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+
+                <!-- Welcome Employer Template -->
+                <h2>Welcome Email (To New Employer)</h2>
+                <table class="form-table">
+                    <tr>
+                        <th scope="row">Subject</th>
+                        <td>
+                            <input type="text" name="welcome_employer_subject" class="large-text" 
+                                   value="<?php echo esc_attr($templates['welcome_employer']['subject']); ?>">
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row">Body</th>
+                        <td>
+                            <textarea name="welcome_employer_body" rows="10" class="large-text"><?php 
+                                echo esc_textarea($templates['welcome_employer']['body']); 
+                            ?></textarea>
+                            <p class="description">
+                                Available variables: {username}, {company_name}, {site_name}, {login_url}
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+
+            <?php submit_button('Save Email Templates'); ?>
+        </form>
+    </div>
+    <?php
+}
+
+// Email Notification Functions
+function giggajob_send_email_notification($template_key, $to_email, $variables = array()) {
+    error_log('=== START Email Notification Process ===');
+    error_log("Template: $template_key");
+    error_log("To: $to_email");
+    error_log("Variables: " . print_r($variables, true));
+    
+    // Get email templates
+    $templates = get_option('giggajob_email_templates');
+    if (!isset($templates[$template_key])) {
+        error_log("ERROR: Email template not found: $template_key");
+        return false;
+    }
+
+    // Get template
+    $template = $templates[$template_key];
+    error_log("Template found: " . print_r($template, true));
+    
+    // Add common variables
+    $variables['site_name'] = get_bloginfo('name');
+    $variables['login_url'] = wp_login_url();
+    
+    // Replace variables in subject and body
+    $subject = $template['subject'];
+    $body = $template['body'];
+    
+    foreach ($variables as $key => $value) {
+        $subject = str_replace('{' . $key . '}', $value, $subject);
+        $body = str_replace('{' . $key . '}', $value, $body);
+    }
+    
+    error_log("Prepared email content:");
+    error_log("Subject: $subject");
+    error_log("Body: $body");
+    
+    // Set up email headers
+    $headers = array(
+        'Content-Type: text/plain; charset=UTF-8',
+        'From: ' . get_bloginfo('name') . ' <' . get_option('admin_email') . '>'
+    );
+    
+    error_log("Headers: " . print_r($headers, true));
+    
+    // Send email
+    error_log("Attempting wp_mail()...");
+    $sent = wp_mail($to_email, $subject, $body, $headers);
+    
+    // Log result
+    if (!$sent) {
+        error_log("ERROR: Failed to send email");
+        error_log("PHP mailer error: " . print_r(error_get_last(), true));
+        
+        // Get WordPress error if available
+        global $phpmailer;
+        if (isset($phpmailer) && is_object($phpmailer)) {
+            error_log("PHPMailer error: " . $phpmailer->ErrorInfo);
+        }
+    } else {
+        error_log("SUCCESS: Email sent successfully");
+    }
+    
+    error_log('=== END Email Notification Process ===');
+    return $sent;
+}
+
+// Send welcome email on registration
+function giggajob_send_welcome_email($user_id) {
+    $user = get_user_by('id', $user_id);
+    if (!$user) return;
+
+    $variables = array(
+        'username' => $user->user_login
+    );
+
+    if (in_array('employer', $user->roles)) {
+        $company_name = get_user_meta($user_id, 'company_name', true);
+        $variables['company_name'] = $company_name;
+        giggajob_send_email_notification('welcome_employer', $user->user_email, $variables);
+    } else {
+        giggajob_send_email_notification('welcome_employee', $user->user_email, $variables);
     }
 }
-add_action('after_switch_theme', 'giggajob_create_user_roles');
+add_action('user_register', 'giggajob_send_welcome_email');
+
+// Send new application notification
+function giggajob_send_application_notification($application_id) {
+    error_log('=== START Application Notification ===');
+    error_log("Processing application notification for application ID: $application_id");
+    
+    $application = get_post($application_id);
+    if (!$application || $application->post_type !== 'job_application') {
+        error_log("Invalid application or wrong post type");
+        return;
+    }
+
+    $job_id = get_post_meta($application_id, 'job_id', true);
+    $job = get_post($job_id);
+    if (!$job) {
+        error_log("Job not found for application");
+        return;
+    }
+
+    $employer = get_user_by('id', $job->post_author);
+    $applicant = get_user_by('id', $application->post_author);
+    
+    error_log("Application details - Job: {$job->post_title}, Employer: {$employer->user_email}, Applicant: {$applicant->user_email}");
+    
+    // Check employer notification preferences
+    $employer_preferences = get_user_meta($employer->ID, 'notification_preferences', true);
+    error_log("Employer preferences: " . print_r($employer_preferences, true));
+    
+    if (!empty($employer_preferences['new_application'])) {
+        $variables = array(
+            'employer_name' => $employer->display_name,
+            'job_title' => $job->post_title,
+            'applicant_name' => $applicant->display_name,
+            'applicant_email' => $applicant->user_email,
+            'application_url' => home_url('/employer-dashboard/?tab=applications')
+        );
+        
+        giggajob_send_email_notification('new_application', $employer->user_email, $variables);
+    } else {
+        error_log("Employer has disabled new application notifications");
+    }
+    
+    error_log('=== END Application Notification ===');
+}
+
+// Send interview scheduled notification
+function giggajob_send_interview_notification($application_id) {
+    error_log('=== START Interview Notification ===');
+    error_log("Application ID: $application_id");
+    
+    $application = get_post($application_id);
+    if (!$application || $application->post_type !== 'job_application') {
+        error_log("ERROR: Invalid application or wrong post type");
+        error_log("Application: " . print_r($application, true));
+        return;
+    }
+
+    $job_id = get_post_meta($application_id, 'job_id', true);
+    $job = get_post($job_id);
+    if (!$job) {
+        error_log("ERROR: Job not found for application");
+        return;
+    }
+
+    $applicant = get_user_by('id', $application->post_author);
+    error_log("Applicant: " . print_r($applicant, true));
+    
+    // Check applicant notification preferences
+    $applicant_preferences = get_user_meta($applicant->ID, 'notification_preferences', true);
+    error_log("Applicant preferences: " . print_r($applicant_preferences, true));
+    
+    if (!empty($applicant_preferences['interview_scheduled'])) {
+        $variables = array(
+            'applicant_name' => $applicant->display_name,
+            'job_title' => $job->post_title,
+            'company_name' => get_post_meta($job_id, 'company_name', true),
+            'interview_date' => get_post_meta($application_id, 'interview_date', true),
+            'interview_time' => get_post_meta($application_id, 'interview_time', true),
+            'interview_location' => get_post_meta($application_id, 'interview_location', true),
+            'interview_message' => get_post_meta($application_id, 'interview_message', true)
+        );
+        
+        error_log("Sending interview notification with variables: " . print_r($variables, true));
+        giggajob_send_email_notification('interview_scheduled', $applicant->user_email, $variables);
+    } else {
+        error_log("Notification skipped: Applicant has disabled interview notifications");
+    }
+    
+    error_log('=== END Interview Notification ===');
+}
+
+// Send application status update notification
+function giggajob_send_status_update_notification($application_id) {
+    error_log('=== START Status Update Notification ===');
+    error_log("Processing status update notification for application ID: $application_id");
+    
+    $application = get_post($application_id);
+    if (!$application || $application->post_type !== 'job_application') {
+        error_log("Invalid application or wrong post type");
+        return;
+    }
+
+    $job_id = get_post_meta($application_id, 'job_id', true);
+    $job = get_post($job_id);
+    if (!$job) {
+        error_log("Job not found for application");
+        return;
+    }
+
+    $applicant = get_user_by('id', $application->post_author);
+    error_log("Applicant: " . print_r($applicant, true));
+    
+    // Check applicant notification preferences
+    $applicant_preferences = get_user_meta($applicant->ID, 'notification_preferences', true);
+    error_log("Applicant preferences: " . print_r($applicant_preferences, true));
+    
+    if (!empty($applicant_preferences['application_status'])) {
+        $status = get_post_meta($application_id, 'status', true);
+        $variables = array(
+            'applicant_name' => $applicant->display_name,
+            'job_title' => $job->post_title,
+            'company_name' => get_post_meta($job_id, 'company_name', true),
+            'status' => ucfirst($status),
+            'application_url' => home_url('/employee-dashboard/?tab=applications')
+        );
+        
+        error_log("Sending status update notification with variables: " . print_r($variables, true));
+        giggajob_send_email_notification('application_status', $applicant->user_email, $variables);
+    } else {
+        error_log("Applicant has disabled status update notifications");
+    }
+    
+    error_log('=== END Status Update Notification ===');
+}
+
+// Hook into application status changes
+function giggajob_handle_application_status_change($meta_id, $object_id, $meta_key, $_meta_value) {
+    error_log('=== START Status Change Handler ===');
+    error_log("Meta ID: $meta_id");
+    error_log("Object ID: $object_id");
+    error_log("Meta Key: $meta_key");
+    error_log("Meta Value: $_meta_value");
+    
+    if ($meta_key === 'status') {
+        if ($_meta_value === 'interview_scheduled') {
+            error_log('Triggering interview notification...');
+            giggajob_send_interview_notification($object_id);
+        } else {
+            error_log('Triggering status update notification...');
+            giggajob_send_status_update_notification($object_id);
+        }
+    }
+    
+    error_log('=== END Status Change Handler ===');
+}
+add_action('updated_post_meta', 'giggajob_handle_application_status_change', 10, 4);
+
+// Add Email Test Page
+add_action('admin_menu', 'giggajob_add_email_test_page');
+function giggajob_add_email_test_page() {
+    add_submenu_page(
+        'giggajob-email-templates',
+        'Email Test',
+        'Email Test',
+        'manage_options',
+        'giggajob-email-test',
+        'giggajob_email_test_page'
+    );
+}
+
+function giggajob_email_test_page() {
+    // Check user capabilities
+    if (!current_user_can('manage_options')) {
+        return;
+    }
+
+    // Handle test email submission
+    if (isset($_POST['test_email_nonce']) && 
+        wp_verify_nonce($_POST['test_email_nonce'], 'send_test_email')) {
+        
+        $to = sanitize_email($_POST['test_email']);
+        $subject = 'GiggaJob Email Test';
+        $message = 'This is a test email from your GiggaJob website. If you receive this, email sending is working correctly.';
+        $headers = array(
+            'Content-Type: text/plain; charset=UTF-8',
+            'From: ' . get_bloginfo('name') . ' <' . get_option('admin_email') . '>'
+        );
+
+        // Test wp_mail function
+        $sent = wp_mail($to, $subject, $message, $headers);
+        
+        if ($sent) {
+            echo '<div class="notice notice-success"><p>Test email sent successfully! Please check your inbox (and spam folder).</p></div>';
+        } else {
+            echo '<div class="notice notice-error"><p>Failed to send test email. Please check your server\'s mail configuration.</p></div>';
+            error_log('Test email failed. wp_mail() error info: ' . print_r(error_get_last(), true));
+        }
+    }
+
+    // Display PHP mail configuration
+    $mail_config = array(
+        'SMTP' => ini_get('SMTP'),
+        'smtp_port' => ini_get('smtp_port'),
+        'sendmail_path' => ini_get('sendmail_path'),
+        'sendmail_from' => ini_get('sendmail_from'),
+        'wp_mail_smtp_plugin' => is_plugin_active('wp-mail-smtp/wp_mail_smtp.php') ? 'Active' : 'Not Active'
+    );
+    ?>
+    <div class="wrap">
+        <h1>Email Test</h1>
+        
+        <div class="card">
+            <h2>Mail Configuration</h2>
+            <table class="form-table">
+                <?php foreach ($mail_config as $key => $value): ?>
+                <tr>
+                    <th scope="row"><?php echo esc_html($key); ?></th>
+                    <td><?php echo esc_html($value ?: 'Not set'); ?></td>
+                </tr>
+                <?php endforeach; ?>
+            </table>
+        </div>
+
+        <div class="card">
+            <h2>Send Test Email</h2>
+            <form method="post" action="">
+                <?php wp_nonce_field('send_test_email', 'test_email_nonce'); ?>
+                <table class="form-table">
+                    <tr>
+                        <th scope="row">Email Address</th>
+                        <td>
+                            <input type="email" name="test_email" class="regular-text" 
+                                   value="<?php echo esc_attr(get_option('admin_email')); ?>" required>
+                            <p class="description">Enter the email address where you want to send the test email.</p>
+                        </td>
+                    </tr>
+                </table>
+                <?php submit_button('Send Test Email'); ?>
+            </form>
+        </div>
+
+        <div class="card">
+            <h2>Troubleshooting Tips</h2>
+            <ol>
+                <li>If emails are not being sent, consider installing a SMTP plugin like "WP Mail SMTP".</li>
+                <li>Check your server's mail logs for any errors.</li>
+                <li>Verify that your hosting provider allows sending emails.</li>
+                <li>Make sure your sender email domain has proper SPF and DKIM records.</li>
+            </ol>
+        </div>
+    </div>
+    <?php
+}
+
+// Debug WordPress mail
+add_action('wp_mail_failed', 'giggajob_log_mailer_errors', 10, 1);
+function giggajob_log_mailer_errors($wp_error) {
+    error_log('WordPress Mail Error: ' . print_r($wp_error, true));
+}
+
+// Add debug info to wp_mail
+add_filter('wp_mail', 'giggajob_debug_email', 10, 1);
+function giggajob_debug_email($args) {
+    error_log('Attempting to send email with the following details:');
+    error_log('To: ' . print_r($args['to'], true));
+    error_log('Subject: ' . $args['subject']);
+    error_log('Headers: ' . print_r($args['headers'], true));
+    return $args;
+}

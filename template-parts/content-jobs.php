@@ -176,17 +176,158 @@ if ($should_show_excerpt): // If we're not on a single job page or we're in dash
             <?php 
             $current_user = wp_get_current_user();
             if (in_array('employee', $current_user->roles)): 
-            ?>
-                <div class="job-apply mt-4">
-                    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#applyJobModal">
-                        Apply Now
-                    </button>
-                </div>
+                // Check if user has already applied
+                $existing_application = get_posts(array(
+                    'post_type' => 'job_application',
+                    'author' => get_current_user_id(),
+                    'meta_query' => array(
+                        array(
+                            'key' => 'job_id',
+                            'value' => get_the_ID()
+                        )
+                    ),
+                    'posts_per_page' => 1
+                ));
+
+                if (!empty($existing_application)): ?>
+                    <div class="alert alert-info mt-4">
+                        <i class="bi bi-info-circle me-2"></i>You have already applied for this position.
+                    </div>
+                <?php else: ?>
+                    <!-- Application Form -->
+                    <div class="job-apply mt-4">
+                        <button type="button" class="btn btn-primary" id="showApplicationForm">
+                            <i class="bi bi-send me-2"></i>Apply Now
+                        </button>
+                        
+                        <div id="applicationForm" class="application-form mt-4" style="display: none;">
+                            <form id="jobApplicationForm" class="needs-validation" novalidate>
+                                <?php wp_nonce_field('submit_job_application', 'job_application_nonce'); ?>
+                                <input type="hidden" name="job_id" value="<?php echo get_the_ID(); ?>">
+                                
+                                <?php
+                                // Get user's resume
+                                $resume = get_posts(array(
+                                    'post_type' => 'resume',
+                                    'author' => get_current_user_id(),
+                                    'posts_per_page' => 1
+                                ));
+                                ?>
+
+                                <?php if (empty($resume)): ?>
+                                    <div class="alert alert-warning">
+                                        <i class="bi bi-exclamation-triangle me-2"></i>
+                                        You need to create a resume before applying.
+                                        <a href="<?php echo home_url('/employee-dashboard/?tab=resume'); ?>" class="btn btn-warning btn-sm ms-3">
+                                            Create Resume
+                                        </a>
+                                    </div>
+                                <?php else: ?>
+                                    <input type="hidden" name="resume_id" value="<?php echo $resume[0]->ID; ?>">
+                                    <div class="alert alert-info mb-3">
+                                        <i class="bi bi-file-person me-2"></i>
+                                        Your resume "<strong><?php echo esc_html($resume[0]->post_title); ?></strong>" will be attached to this application.
+                                        <a href="<?php echo home_url('/employee-dashboard/?tab=resume'); ?>" class="btn btn-outline-info btn-sm ms-3">
+                                            View/Edit Resume
+                                        </a>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label for="cover_letter" class="form-label">Cover Letter *</label>
+                                        <textarea class="form-control" id="cover_letter" name="cover_letter" 
+                                                rows="6" required 
+                                                placeholder="Introduce yourself and explain why you're a great fit for this position..."></textarea>
+                                        <div class="invalid-feedback">Please provide a cover letter.</div>
+                                    </div>
+
+                                    <div class="d-flex gap-2">
+                                        <button type="submit" class="btn btn-primary">
+                                            <i class="bi bi-send me-2"></i>Submit Application
+                                        </button>
+                                        <button type="button" class="btn btn-outline-secondary" id="cancelApplication">
+                                            <i class="bi bi-x-circle me-2"></i>Cancel
+                                        </button>
+                                    </div>
+                                <?php endif; ?>
+                            </form>
+                        </div>
+                    </div>
+
+                    <script>
+                    jQuery(document).ready(function($) {
+                        // Show/Hide application form
+                        $('#showApplicationForm').click(function() {
+                            $(this).hide();
+                            $('#applicationForm').slideDown();
+                        });
+
+                        $('#cancelApplication').click(function() {
+                            $('#applicationForm').slideUp(function() {
+                                $('#showApplicationForm').show();
+                            });
+                        });
+
+                        // Handle form submission
+                        $('#jobApplicationForm').submit(function(e) {
+                            e.preventDefault();
+                            
+                            if (!this.checkValidity()) {
+                                e.stopPropagation();
+                                $(this).addClass('was-validated');
+                                return;
+                            }
+
+                            var $submitBtn = $(this).find('button[type="submit"]');
+                            var $form = $(this);
+
+                            $.ajax({
+                                url: giggajob_ajax.ajax_url,
+                                type: 'POST',
+                                data: {
+                                    action: 'submit_job_application',
+                                    job_application_nonce: $('#job_application_nonce').val(),
+                                    job_id: $('input[name="job_id"]').val(),
+                                    resume_id: $('input[name="resume_id"]').val(),
+                                    cover_letter: $('#cover_letter').val()
+                                },
+                                beforeSend: function() {
+                                    $submitBtn.prop('disabled', true)
+                                            .html('<span class="spinner-border spinner-border-sm me-2"></span>Submitting...');
+                                },
+                                success: function(response) {
+                                    if (response.success) {
+                                        // Replace form with success message
+                                        $('#applicationForm').html(
+                                            '<div class="alert alert-success">' +
+                                            '<i class="bi bi-check-circle me-2"></i>' +
+                                            'Your application has been submitted successfully!' +
+                                            '</div>'
+                                        );
+                                        // Reload page after 2 seconds
+                                        setTimeout(function() {
+                                            location.reload();
+                                        }, 2000);
+                                    } else {
+                                        alert(response.data.message || 'An error occurred while submitting your application.');
+                                    }
+                                },
+                                error: function() {
+                                    alert('An error occurred while submitting your application.');
+                                },
+                                complete: function() {
+                                    $submitBtn.prop('disabled', false)
+                                            .html('<i class="bi bi-send me-2"></i>Submit Application');
+                                }
+                            });
+                        });
+                    });
+                    </script>
+                <?php endif; ?>
             <?php endif; ?>
         <?php else: ?>
             <div class="job-apply mt-4">
                 <a href="<?php echo esc_url(wp_login_url(get_permalink())); ?>" class="btn btn-primary">
-                    Login to Apply
+                    <i class="bi bi-box-arrow-in-right me-2"></i>Login to Apply
                 </a>
             </div>
         <?php endif; ?>

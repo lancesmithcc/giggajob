@@ -3,11 +3,27 @@
  * Template Name: Employee Dashboard
  */
 
+error_log('=== Employee Dashboard Access Debug ===');
+error_log('User logged in: ' . (is_user_logged_in() ? 'yes' : 'no'));
+if (is_user_logged_in()) {
+    $current_user = wp_get_current_user();
+    error_log('User roles: ' . print_r($current_user->roles, true));
+}
+
 // Redirect if not logged in or not an employee
-if (!is_user_logged_in() || !in_array('employee', wp_get_current_user()->roles)) {
+if (!is_user_logged_in()) {
+    error_log('User not logged in - redirecting to login');
+    wp_redirect(wp_login_url(home_url('/employee-dashboard/')));
+    exit;
+}
+
+if (!in_array('employee', wp_get_current_user()->roles)) {
+    error_log('User not an employee - redirecting to home');
     wp_redirect(home_url());
     exit;
 }
+
+error_log('User authorized - loading dashboard');
 
 get_header();
 
