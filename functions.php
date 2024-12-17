@@ -1654,20 +1654,24 @@ add_action('save_post_jobs', 'giggajob_save_job_meta_box');
  */
 function handle_application_action() {
     error_log('=== START Application Action Handler ===');
+    error_log('POST data: ' . print_r($_POST, true));
     
     // Check nonce and user
     if (!check_ajax_referer('application_action_nonce', 'nonce', false)) {
+        error_log('Application Action Handler - Nonce verification failed');
         wp_send_json_error(array('message' => 'Security check failed'));
         return;
     }
 
     if (!is_user_logged_in()) {
+        error_log('Application Action Handler - User not logged in');
         wp_send_json_error(array('message' => 'Permission denied'));
         return;
     }
 
     $current_user = wp_get_current_user();
     if (!in_array('employer', $current_user->roles)) {
+        error_log('Application Action Handler - User not an employer');
         wp_send_json_error(array('message' => 'Permission denied'));
         return;
     }
@@ -1675,6 +1679,7 @@ function handle_application_action() {
     // Get and validate application ID
     $application_id = isset($_POST['application_id']) ? intval($_POST['application_id']) : 0;
     if (!$application_id) {
+        error_log('Application Action Handler - Invalid application ID');
         wp_send_json_error(array('message' => 'Invalid application ID'));
         return;
     }
@@ -1682,6 +1687,7 @@ function handle_application_action() {
     // Get and validate action
     $action = isset($_POST['application_action']) ? sanitize_text_field($_POST['application_action']) : '';
     if (!in_array($action, array('reject', 'cancel_interview'))) {
+        error_log('Application Action Handler - Invalid action: ' . $action);
         wp_send_json_error(array('message' => 'Invalid action'));
         return;
     }
@@ -1692,6 +1698,7 @@ function handle_application_action() {
 
     // Verify user owns this job
     if (!$job || $job->post_author != $current_user->ID) {
+        error_log('Application Action Handler - Permission denied: Job ownership verification failed');
         wp_send_json_error(array('message' => 'Permission denied'));
         return;
     }
@@ -1702,19 +1709,42 @@ function handle_application_action() {
     switch ($action) {
         case 'reject':
             update_post_meta($application_id, 'status', 'rejected');
-            // This will trigger the status change notification
+            giggajob_send_status_update_notification($application_id);
             break;
+            
         case 'cancel_interview':
+            // Store interview details before clearing them
+            $interview_date = get_post_meta($application_id, 'interview_date', true);
+            $interview_time = get_post_meta($application_id, 'interview_time', true);
+            $interview_location = get_post_meta($application_id, 'interview_location', true);
+            
+            // Update status and clear interview details
             update_post_meta($application_id, 'status', 'pending');
             delete_post_meta($application_id, 'interview_date');
             delete_post_meta($application_id, 'interview_time');
             delete_post_meta($application_id, 'interview_location');
             delete_post_meta($application_id, 'interview_message');
-            // This will trigger the status change notification
+            
+            // Send cancellation notification
+            if ($interview_date && $interview_time) {
+                $applicant = get_user_by('id', get_post_field('post_author', $application_id));
+                $company_name = get_post_meta($job_id, 'company_name', true);
+                
+                $variables = array(
+                    'applicant_name' => $applicant->display_name,
+                    'job_title' => get_the_title($job_id),
+                    'company_name' => $company_name,
+                    'interview_date' => date_i18n('l, F j, Y', strtotime($interview_date)),
+                    'interview_time' => date_i18n('g:i A', strtotime($interview_time)),
+                    'application_url' => home_url('/employee-dashboard/?tab=applications')
+                );
+                
+                giggajob_send_email_notification('interview_cancelled', $applicant->user_email, $variables);
+            }
             break;
     }
 
-    error_log('=== END Application Action Handler ===');
+    error_log('Action completed successfully');
     wp_send_json_success(array('message' => 'Action completed successfully'));
 }
 add_action('wp_ajax_handle_application_action', 'handle_application_action');
@@ -1723,21 +1753,20 @@ add_action('wp_ajax_handle_application_action', 'handle_application_action');
 add_action('wp_ajax_handle_interview_schedule', 'giggajob_handle_interview_schedule');
 function giggajob_handle_interview_schedule() {
     error_log('=== START Interview Schedule Handler ===');
-    
-    // Debug output
-    error_log('Interview Schedule Handler - POST data: ' . print_r($_POST, true));
-    error_log('Interview Schedule Handler - Nonce: ' . (isset($_POST['nonce']) ? $_POST['nonce'] : 'not set'));
+    error_log('POST data: ' . print_r($_POST, true));
     
     // Check nonce
-    if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'giggajob_ajax_nonce')) {
+    if (!check_ajax_referer('giggajob_ajax_nonce', 'nonce', false)) {
         error_log('Interview Schedule Handler - Nonce verification failed');
         wp_send_json_error(array('message' => 'Security check failed.'));
+        return;
     }
 
     // Check if user is logged in and is an employer
     if (!is_user_logged_in() || !in_array('employer', wp_get_current_user()->roles)) {
         error_log('Interview Schedule Handler - Permission denied: User not logged in or not an employer');
         wp_send_json_error(array('message' => 'Permission denied.'));
+        return;
     }
 
     // Validate required fields
@@ -1752,6 +1781,7 @@ function giggajob_handle_interview_schedule() {
         if (empty($_POST[$field])) {
             error_log('Interview Schedule Handler - Missing required field: ' . $field);
             wp_send_json_error(array('message' => $label . ' is required.'));
+            return;
         }
     }
 
@@ -1762,6 +1792,7 @@ function giggajob_handle_interview_schedule() {
     if (!$application || $application->post_type !== 'job_application') {
         error_log('Interview Schedule Handler - Invalid application ID: ' . $application_id);
         wp_send_json_error(array('message' => 'Invalid application.'));
+        return;
     }
 
     // Get the associated job
@@ -1772,24 +1803,251 @@ function giggajob_handle_interview_schedule() {
     if (!$job || $job->post_author != get_current_user_id()) {
         error_log('Interview Schedule Handler - Permission denied: Job ownership verification failed');
         wp_send_json_error(array('message' => 'Permission denied.'));
+        return;
     }
 
-    // Update application status and interview details
-    update_post_meta($application_id, 'status', 'interview_scheduled');
-    update_post_meta($application_id, 'interview_date', sanitize_text_field($_POST['interview_date']));
-    update_post_meta($application_id, 'interview_time', sanitize_text_field($_POST['interview_time']));
-    update_post_meta($application_id, 'interview_location', sanitize_text_field($_POST['interview_location']));
+    try {
+        // Update application status and interview details
+        update_post_meta($application_id, 'status', 'interview_scheduled');
+        update_post_meta($application_id, 'interview_date', sanitize_text_field($_POST['interview_date']));
+        update_post_meta($application_id, 'interview_time', sanitize_text_field($_POST['interview_time']));
+        update_post_meta($application_id, 'interview_location', sanitize_text_field($_POST['interview_location']));
+        
+        if (!empty($_POST['interview_message'])) {
+            update_post_meta($application_id, 'interview_message', sanitize_textarea_field($_POST['interview_message']));
+        }
+
+        error_log('Interview details saved successfully');
+        error_log('Date: ' . $_POST['interview_date']);
+        error_log('Time: ' . $_POST['interview_time']);
+        error_log('Location: ' . $_POST['interview_location']);
+        error_log('Message: ' . (isset($_POST['interview_message']) ? $_POST['interview_message'] : 'No message'));
+        
+        // Send notification immediately
+        $notification_sent = giggajob_send_interview_notification($application_id);
+        
+        if ($notification_sent) {
+            error_log('Interview notification sent successfully');
+            wp_send_json_success(array('message' => 'Interview scheduled and notification sent successfully.'));
+        } else {
+            error_log('Failed to send interview notification');
+            wp_send_json_error(array('message' => 'Failed to schedule interview. Please try again.'));
+        }
+    } catch (Exception $e) {
+        error_log('Error in interview scheduling: ' . $e->getMessage());
+        wp_send_json_error(array('message' => 'An error occurred while scheduling the interview.'));
+    }
+}
+
+// Send interview notification function
+function giggajob_send_interview_notification($application_id) {
+    error_log('=== START Interview Notification ===');
+    error_log("Application ID: $application_id");
     
-    if (!empty($_POST['interview_message'])) {
-        update_post_meta($application_id, 'interview_message', sanitize_textarea_field($_POST['interview_message']));
+    try {
+        // Get application
+        $application = get_post($application_id);
+        if (!$application || $application->post_type !== 'job_application') {
+            error_log("ERROR: Invalid application or wrong post type");
+            error_log("Application: " . print_r($application, true));
+            return false;
+        }
+
+        // Get job details
+        $job_id = get_post_meta($application_id, 'job_id', true);
+        $job = get_post($job_id);
+        if (!$job) {
+            error_log("ERROR: Job not found for application");
+            return false;
+        }
+
+        // Get applicant details
+        $applicant = get_user_by('id', $application->post_author);
+        if (!$applicant) {
+            error_log("ERROR: Applicant not found");
+            return false;
+        }
+
+        // Get interview details
+        $interview_date = get_post_meta($application_id, 'interview_date', true);
+        $interview_time = get_post_meta($application_id, 'interview_time', true);
+        $interview_location = get_post_meta($application_id, 'interview_location', true);
+        $interview_message = get_post_meta($application_id, 'interview_message', true);
+
+        if (!$interview_date || !$interview_time || !$interview_location) {
+            error_log("ERROR: Missing required interview details");
+            error_log("Date: $interview_date");
+            error_log("Time: $interview_time");
+            error_log("Location: $interview_location");
+            return false;
+        }
+
+        // Format the date and time
+        $formatted_date = date_i18n('l, F j, Y', strtotime($interview_date));
+        $formatted_time = date_i18n('g:i A', strtotime($interview_time));
+
+        error_log("Interview details:");
+        error_log("Date: $formatted_date");
+        error_log("Time: $formatted_time");
+        error_log("Location: $interview_location");
+        error_log("Message: $interview_message");
+
+        // Get company details
+        $company_name = get_post_meta($job_id, 'company_name', true);
+        
+        // Prepare email variables
+        $variables = array(
+            'applicant_name' => $applicant->display_name,
+            'job_title' => $job->post_title,
+            'company_name' => $company_name,
+            'interview_date' => $formatted_date,
+            'interview_time' => $formatted_time,
+            'interview_location' => $interview_location,
+            'interview_message' => $interview_message ?: 'No additional message provided.'
+        );
+
+        error_log("Sending interview notification with variables: " . print_r($variables, true));
+
+        // Get email templates
+        $templates = get_option('giggajob_email_templates');
+        if (!isset($templates['interview_scheduled'])) {
+            error_log("ERROR: Interview scheduled email template not found");
+            return false;
+        }
+
+        $template = $templates['interview_scheduled'];
+        $subject = $template['subject'];
+        $body = $template['body'];
+
+        // Replace variables in template
+        foreach ($variables as $key => $value) {
+            $subject = str_replace('{' . $key . '}', $value, $subject);
+            $body = str_replace('{' . $key . '}', $value, $body);
+        }
+
+        error_log("Prepared email content:");
+        error_log("Subject: $subject");
+        error_log("Body: $body");
+
+        // Set up email headers
+        $headers = array(
+            'Content-Type: text/plain; charset=UTF-8',
+            'From: ' . get_bloginfo('name') . ' <' . get_option('admin_email') . '>'
+        );
+
+        // Send email directly using wp_mail
+        $sent = wp_mail($applicant->user_email, $subject, $body, $headers);
+
+        if ($sent) {
+            error_log("Interview notification sent successfully");
+            update_post_meta($application_id, 'interview_notification_sent', current_time('mysql'));
+            return true;
+        } else {
+            error_log("Failed to send interview notification");
+            error_log("PHP mailer error: " . print_r(error_get_last(), true));
+            return false;
+        }
+    } catch (Exception $e) {
+        error_log("Error in send_interview_notification: " . $e->getMessage());
+        return false;
+    }
+}
+
+// Send email notification function
+function giggajob_send_email_notification($template_key, $to_email, $variables = array()) {
+    error_log('=== START Email Notification Process ===');
+    error_log("Template: $template_key");
+    error_log("To: $to_email");
+    error_log("Variables: " . print_r($variables, true));
+
+    // Get email templates
+    $templates = get_option('giggajob_email_templates');
+    if (!isset($templates[$template_key])) {
+        error_log("ERROR: Email template not found: $template_key");
+        return false;
     }
 
-    error_log('Interview details saved, triggering notification...');
+    $template = $templates[$template_key];
+    $subject = $template['subject'];
+    $body = $template['body'];
+
+    // Add common variables
+    $variables['site_name'] = get_bloginfo('name');
+    $variables['login_url'] = wp_login_url();
+
+    // Replace variables in subject and body
+    foreach ($variables as $key => $value) {
+        $subject = str_replace('{' . $key . '}', $value, $subject);
+        $body = str_replace('{' . $key . '}', $value, $body);
+    }
+
+    error_log("Prepared email content:");
+    error_log("Subject: $subject");
+    error_log("Body: $body");
+
+    // Set up email headers
+    $headers = array(
+        'Content-Type: text/plain; charset=UTF-8',
+        'From: ' . get_bloginfo('name') . ' <' . get_option('admin_email') . '>'
+    );
+
+    // Send email
+    error_log("Attempting to send email...");
+    $sent = wp_mail($to_email, $subject, $body, $headers);
+
+    if ($sent) {
+        error_log("Email sent successfully");
+    } else {
+        error_log("Failed to send email");
+        error_log("PHP mailer error: " . print_r(error_get_last(), true));
+    }
+
+    error_log('=== END Email Notification Process ===');
+    return $sent;
+}
+
+// Send application status update notification
+function giggajob_send_status_update_notification($application_id) {
+    error_log('=== START Status Update Notification ===');
+    error_log("Processing status update notification for application ID: $application_id");
     
-    // This will trigger the meta update hook which sends the email
-    error_log('=== END Interview Schedule Handler ===');
+    $application = get_post($application_id);
+    if (!$application || $application->post_type !== 'job_application') {
+        error_log("Invalid application or wrong post type");
+        return;
+    }
+
+    $job_id = get_post_meta($application_id, 'job_id', true);
+    $job = get_post($job_id);
+    if (!$job) {
+        error_log("Job not found for application");
+        return;
+    }
+
+    $applicant = get_user_by('id', $application->post_author);
+    error_log("Applicant: " . print_r($applicant, true));
     
-    wp_send_json_success(array('message' => 'Interview scheduled successfully.'));
+    // Check applicant notification preferences
+    $applicant_preferences = get_user_meta($applicant->ID, 'notification_preferences', true);
+    error_log("Applicant preferences: " . print_r($applicant_preferences, true));
+    
+    if (!empty($applicant_preferences['application_status'])) {
+        $status = get_post_meta($application_id, 'status', true);
+        $variables = array(
+            'applicant_name' => $applicant->display_name,
+            'job_title' => $job->post_title,
+            'company_name' => get_post_meta($job_id, 'company_name', true),
+            'status' => ucfirst($status),
+            'application_url' => home_url('/employee-dashboard/?tab=applications')
+        );
+        
+        error_log("Sending status update notification with variables: " . print_r($variables, true));
+        giggajob_send_email_notification('application_status', $applicant->user_email, $variables);
+    } else {
+        error_log("Applicant has disabled status update notifications");
+    }
+    
+    error_log('=== END Status Update Notification ===');
 }
 
 // Handle Notification Preferences Update
@@ -2145,7 +2403,7 @@ function giggajob_email_templates_page() {
 
         update_option('giggajob_email_templates', $templates);
         echo '<div class="notice notice-success"><p>Email templates saved successfully!</p></div>';
-    }
+}
 
     // Get current templates
     $templates = get_option('giggajob_email_templates', array(
@@ -2154,8 +2412,12 @@ function giggajob_email_templates_page() {
             'body' => "Dear {employer_name},\n\nA new application has been received for your job posting: {job_title}\n\nCandidate: {applicant_name}\nEmail: {applicant_email}\n\nYou can view the full application in your dashboard: {application_url}\n\nBest regards,\n{site_name}"
         ),
         'interview_scheduled' => array(
-            'subject' => 'Interview Scheduled: {job_title}',
-            'body' => "Dear {applicant_name},\n\nAn interview has been scheduled for your application to {job_title} at {company_name}.\n\nDate: {interview_date}\nTime: {interview_time}\nLocation: {interview_location}\n\n{interview_message}\n\nBest regards,\n{company_name}"
+            'subject' => 'Interview Scheduled: {job_title} at {company_name}',
+            'body' => "Dear {applicant_name},\n\nYour interview has been scheduled for the {job_title} position at {company_name}.\n\nInterview Details:\n----------------\nDate: {interview_date}\nTime: {interview_time}\nLocation: {interview_location}\n\nAdditional Information:\n{interview_message}\n\nPlease make sure to arrive on time and bring any necessary documentation.\n\nIf you need to reschedule or have any questions, please contact us through your dashboard.\n\nBest regards,\n{company_name}"
+        ),
+        'interview_cancelled' => array(
+            'subject' => 'Interview Cancelled: {job_title} at {company_name}',
+            'body' => "Dear {applicant_name},\n\nThis is to inform you that your scheduled interview for the {job_title} position at {company_name} has been cancelled.\n\nPreviously Scheduled For:\nDate: {interview_date}\nTime: {interview_time}\n\nYour application status has been returned to pending. The employer may reschedule the interview or update your application status in the future.\n\nYou can view the details in your dashboard: {application_url}\n\nBest regards,\n{company_name}"
         ),
         'application_status' => array(
             'subject' => 'Application Status Update: {job_title}',
@@ -2302,71 +2564,6 @@ function giggajob_email_templates_page() {
     <?php
 }
 
-// Email Notification Functions
-function giggajob_send_email_notification($template_key, $to_email, $variables = array()) {
-    error_log('=== START Email Notification Process ===');
-    error_log("Template: $template_key");
-    error_log("To: $to_email");
-    error_log("Variables: " . print_r($variables, true));
-    
-    // Get email templates
-    $templates = get_option('giggajob_email_templates');
-    if (!isset($templates[$template_key])) {
-        error_log("ERROR: Email template not found: $template_key");
-        return false;
-    }
-
-    // Get template
-    $template = $templates[$template_key];
-    error_log("Template found: " . print_r($template, true));
-    
-    // Add common variables
-    $variables['site_name'] = get_bloginfo('name');
-    $variables['login_url'] = wp_login_url();
-    
-    // Replace variables in subject and body
-    $subject = $template['subject'];
-    $body = $template['body'];
-    
-    foreach ($variables as $key => $value) {
-        $subject = str_replace('{' . $key . '}', $value, $subject);
-        $body = str_replace('{' . $key . '}', $value, $body);
-    }
-    
-    error_log("Prepared email content:");
-    error_log("Subject: $subject");
-    error_log("Body: $body");
-    
-    // Set up email headers
-    $headers = array(
-        'Content-Type: text/plain; charset=UTF-8',
-        'From: ' . get_bloginfo('name') . ' <' . get_option('admin_email') . '>'
-    );
-    
-    error_log("Headers: " . print_r($headers, true));
-    
-    // Send email
-    error_log("Attempting wp_mail()...");
-    $sent = wp_mail($to_email, $subject, $body, $headers);
-    
-    // Log result
-    if (!$sent) {
-        error_log("ERROR: Failed to send email");
-        error_log("PHP mailer error: " . print_r(error_get_last(), true));
-        
-        // Get WordPress error if available
-        global $phpmailer;
-        if (isset($phpmailer) && is_object($phpmailer)) {
-            error_log("PHPMailer error: " . $phpmailer->ErrorInfo);
-        }
-    } else {
-        error_log("SUCCESS: Email sent successfully");
-    }
-    
-    error_log('=== END Email Notification Process ===');
-    return $sent;
-}
-
 // Send welcome email on registration
 function giggajob_send_welcome_email($user_id) {
     $user = get_user_by('id', $user_id);
@@ -2429,118 +2626,6 @@ function giggajob_send_application_notification($application_id) {
     
     error_log('=== END Application Notification ===');
 }
-
-// Send interview scheduled notification
-function giggajob_send_interview_notification($application_id) {
-    error_log('=== START Interview Notification ===');
-    error_log("Application ID: $application_id");
-    
-    $application = get_post($application_id);
-    if (!$application || $application->post_type !== 'job_application') {
-        error_log("ERROR: Invalid application or wrong post type");
-        error_log("Application: " . print_r($application, true));
-        return;
-    }
-
-    $job_id = get_post_meta($application_id, 'job_id', true);
-    $job = get_post($job_id);
-    if (!$job) {
-        error_log("ERROR: Job not found for application");
-        return;
-    }
-
-    $applicant = get_user_by('id', $application->post_author);
-    error_log("Applicant: " . print_r($applicant, true));
-    
-    // Check applicant notification preferences
-    $applicant_preferences = get_user_meta($applicant->ID, 'notification_preferences', true);
-    error_log("Applicant preferences: " . print_r($applicant_preferences, true));
-    
-    if (!empty($applicant_preferences['interview_scheduled'])) {
-        $variables = array(
-            'applicant_name' => $applicant->display_name,
-            'job_title' => $job->post_title,
-            'company_name' => get_post_meta($job_id, 'company_name', true),
-            'interview_date' => get_post_meta($application_id, 'interview_date', true),
-            'interview_time' => get_post_meta($application_id, 'interview_time', true),
-            'interview_location' => get_post_meta($application_id, 'interview_location', true),
-            'interview_message' => get_post_meta($application_id, 'interview_message', true)
-        );
-        
-        error_log("Sending interview notification with variables: " . print_r($variables, true));
-        giggajob_send_email_notification('interview_scheduled', $applicant->user_email, $variables);
-    } else {
-        error_log("Notification skipped: Applicant has disabled interview notifications");
-    }
-    
-    error_log('=== END Interview Notification ===');
-}
-
-// Send application status update notification
-function giggajob_send_status_update_notification($application_id) {
-    error_log('=== START Status Update Notification ===');
-    error_log("Processing status update notification for application ID: $application_id");
-    
-    $application = get_post($application_id);
-    if (!$application || $application->post_type !== 'job_application') {
-        error_log("Invalid application or wrong post type");
-        return;
-    }
-
-    $job_id = get_post_meta($application_id, 'job_id', true);
-    $job = get_post($job_id);
-    if (!$job) {
-        error_log("Job not found for application");
-        return;
-    }
-
-    $applicant = get_user_by('id', $application->post_author);
-    error_log("Applicant: " . print_r($applicant, true));
-    
-    // Check applicant notification preferences
-    $applicant_preferences = get_user_meta($applicant->ID, 'notification_preferences', true);
-    error_log("Applicant preferences: " . print_r($applicant_preferences, true));
-    
-    if (!empty($applicant_preferences['application_status'])) {
-        $status = get_post_meta($application_id, 'status', true);
-        $variables = array(
-            'applicant_name' => $applicant->display_name,
-            'job_title' => $job->post_title,
-            'company_name' => get_post_meta($job_id, 'company_name', true),
-            'status' => ucfirst($status),
-            'application_url' => home_url('/employee-dashboard/?tab=applications')
-        );
-        
-        error_log("Sending status update notification with variables: " . print_r($variables, true));
-        giggajob_send_email_notification('application_status', $applicant->user_email, $variables);
-    } else {
-        error_log("Applicant has disabled status update notifications");
-    }
-    
-    error_log('=== END Status Update Notification ===');
-}
-
-// Hook into application status changes
-function giggajob_handle_application_status_change($meta_id, $object_id, $meta_key, $_meta_value) {
-    error_log('=== START Status Change Handler ===');
-    error_log("Meta ID: $meta_id");
-    error_log("Object ID: $object_id");
-    error_log("Meta Key: $meta_key");
-    error_log("Meta Value: $_meta_value");
-    
-    if ($meta_key === 'status') {
-        if ($_meta_value === 'interview_scheduled') {
-            error_log('Triggering interview notification...');
-            giggajob_send_interview_notification($object_id);
-        } else {
-            error_log('Triggering status update notification...');
-            giggajob_send_status_update_notification($object_id);
-        }
-    }
-    
-    error_log('=== END Status Change Handler ===');
-}
-add_action('updated_post_meta', 'giggajob_handle_application_status_change', 10, 4);
 
 // Add Email Test Page
 add_action('admin_menu', 'giggajob_add_email_test_page');
